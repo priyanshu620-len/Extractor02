@@ -219,7 +219,7 @@ async def login(app, user_id, m, all_urls, start_time, bname, batch_id, app_name
     pdf_count = len(re.findall(r'\.pdf', all_text))
     drm_video_count = len(re.findall(r'\.(videoid|mpd|testbook)', all_text))
     enc_pdf_count = len(re.findall(r'\.pdf\*', all_text))
-    caption = (f"**APP NAME :** UTKARSH \n\n **Batch Name :** {batch_id} - {bname} \n\n TOTAL LINK - {len(all_urls)} \n Video Links - {video_count - drm_video_count} \n Total Pdf - {pdf_count} \n\n  **╾───• Cobra Extractor •───╼**  ")
+    caption = (f"**APP NAME :** UTKARSH \n\n **Batch Name :** {batch_id} - {bname} \n\n TOTAL LINK - {len(all_urls)} \n Video Links - {video_count - drm_video_count} \n Total Pdf - {pdf_count} \n\n  **╾───• 𓆩ONҽX𓆪 Extractor •───╼**  ")
     async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
         await f.writelines([url + '\n' for url in all_urls])
     copy = await m.reply_document(document=file_path,caption=caption)
