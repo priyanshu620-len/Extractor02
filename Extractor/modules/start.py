@@ -164,7 +164,7 @@ back_button  = [[
 
 
 # ------------------------------------------------------------------------------- #
-captionn =(💎 Welcome to Premium Extractor Bot 💎
+captionn = """💎 Welcome to Premium Extractor Bot 💎
 ╾─────────────────────────╼
 ⚙️ Choose your mode below:
 
@@ -173,9 +173,19 @@ captionn =(💎 Welcome to Premium Extractor Bot 💎
 ╾─────────────────────────╼
 🧠 Tip: Use correct input format for smooth extraction.
 💬 Need Help? Tap 'Developer' below for direct support.
-╾─────────────────────────╼\n\n \n /appx - For Master Appx\n /appxlist - For Appxlist\n /appxotp - For Appx OTP Login \n /adda - For Adda 247 \n /cp -  For Classplus \n /getapi - To Find Appx Api api \n /iq - For Study IQ \n /kd - For KD Campus\n /kgs - For Khan GS App\n /pw - For Physics Wallah \n /utkarsh - For Utkarsh " )
+╾─────────────────────────╼
 
-
+/appx - For Master Appx
+/appxlist - For Appxlist
+/appxotp - For Appx OTP Login 
+/adda - For Adda 247 
+/cp - For Classplus 
+/getapi - To Find Appx Api api 
+/iq - For Study IQ 
+/kd - For KD Campus
+/kgs - For Khan GS App
+/pw - For Physics Wallah 
+/utkarsh - For Utkarsh"""
 @app.on_message(filters.command("start"))
 async def start(_,message):
   join = await subscribe(_,message)
