@@ -18,6 +18,7 @@ from Extractor.modules.findapi import findapis_extract
 from Extractor.modules.utk import handle_utk_logic
 from Extractor.modules.iq import handle_iq_logic
 from Extractor.modules.adda import adda_command_handler
+from Extractor.
 log_channel = CHANNEL_ID
 # ------------------------------------------------------------------------------- #
 
