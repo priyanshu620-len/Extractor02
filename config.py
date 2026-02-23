@@ -27,7 +27,7 @@ API_ID = int(os.environ.get("API_ID", "34320281"))
 # ------------------------------------------------
 API_HASH = os.environ.get("API_HASH", "e55840d9b1ba82ba7748a30e2bbbfc1a")
 # ----------------D--------------------------------
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8405538481:AAHIRwpFy0aDKuZAi6w0940Su8H7CRLoknw")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8372745246:AAFsqcrX5a8R6dEuPhgvChBvU-EDSzRjddg")
 # -----------------A-------------------------------
 BOT_USERNAME = os.environ.get("extractor011_bot")
 # ------------------X------------------------------
