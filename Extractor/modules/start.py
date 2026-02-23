@@ -18,7 +18,6 @@ from Extractor.modules.findapi import findapis_extract
 from Extractor.modules.utk import handle_utk_logic
 from Extractor.modules.iq import handle_iq_logic
 from Extractor.modules.adda import adda_command_handler
-from Extractor.
 log_channel = CHANNEL_ID
 # ------------------------------------------------------------------------------- #
 
@@ -47,17 +46,17 @@ custom_button = [[
 
 button1 = [              
     [
-        InlineKeyboardButton("Achievers Academy", callback_data="achievers_acc"),
-        InlineKeyboardButton("Adhyayan Mantra", callback_data="adhyan_mantra"),
-        InlineKeyboardButton("Aman Sir", callback_data="aman_sir"),
+        InlineKeyboardButton("🚀Achievers Academy🚀", callback_data="achievers_acc"),
+        InlineKeyboardButton("🚀Adhyayan Mantra🚀", callback_data="adhyan_mantra"),
+        InlineKeyboardButton("🚀Aman Sir🚀", callback_data="aman_sir"),
     ],
     [
-        InlineKeyboardButton("Anil Sir iti", callback_data="anilsir_iti"),
-        InlineKeyboardButton("App Exampur", callback_data="app_exampur"),
-        InlineKeyboardButton("Army Study", callback_data="army_study"),
+        InlineKeyboardButton("🚀Anil Sir iti🚀", callback_data="anilsir_iti"),
+        InlineKeyboardButton("🚀App Exampur🚀", callback_data="app_exampur"),
+        InlineKeyboardButton("🚀Army Study🚀", callback_data="army_study"),
     ],
     [
-        InlineKeyboardButton("Ashish Sing Lec", callback_data="Ashish_lec"),
+        InlineKeyboardButton("🚀Ashish Sing Lec🚀", callback_data="Ashish_lec"),
         InlineKeyboardButton("Bharti Sir", callback_data="bharti_sir"),
         InlineKeyboardButton("Booster Academy", callback_data="booster_academy"),
     ],
@@ -152,7 +151,7 @@ button1 = [
     ],
     [
         InlineKeyboardButton("﹤", callback_data="prev"),
-        InlineKeyboardButton("𝙷𝙾𝙼𝙴", callback_data="home_"),
+        InlineKeyboardButton("HOME", callback_data="home_"),
         InlineKeyboardButton("﹥", callback_data="next"),
     ]
 ]
@@ -165,7 +164,16 @@ back_button  = [[
 
 
 # ------------------------------------------------------------------------------- #
-captionn =("Welcome to Our COBRA TXT Extractor Bot.\n\n Some Bot Commands are :\n\n \n /appx - For Master Appx\n /appxlist - For Appxlist\n /appxotp - For Appx OTP Login \n /adda - For Adda 247 \n /cp -  For Classplus \n /getapi - To Find Appx Api api \n /iq - For Study IQ \n /kd - For KD Campus\n /kgs - For Khan GS App\n /pw - For Physics Wallah \n /utkarsh - For Utkarsh " )
+captionn =(💎 Welcome to Premium Extractor Bot 💎
+╾─────────────────────────╼
+⚙️ Choose your mode below:
+
+🔐 Login Required: For apps that need ID & Password.
+🚀 Without Login: Extract freely from supported apps.
+╾─────────────────────────╼
+🧠 Tip: Use correct input format for smooth extraction.
+💬 Need Help? Tap 'Developer' below for direct support.
+╾─────────────────────────╼\n\n \n /appx - For Master Appx\n /appxlist - For Appxlist\n /appxotp - For Appx OTP Login \n /adda - For Adda 247 \n /cp -  For Classplus \n /getapi - To Find Appx Api api \n /iq - For Study IQ \n /kd - For KD Campus\n /kgs - For Khan GS App\n /pw - For Physics Wallah \n /utkarsh - For Utkarsh " )
 
 
 @app.on_message(filters.command("start"))
