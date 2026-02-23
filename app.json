@@ -1,0 +1,53 @@
+{
+  "name": "SAURABH BOTS",
+  "description": "Telegram Bot using Pyrogram",
+  "repository": "https://github.com/DAXXTEAM",
+  "env": {
+    "API_ID": {
+      "description": "26003553",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "c1f27c622acecf9bf6e71d0d295e75f9",
+      "required": true
+    },
+    "BOT_TOKEN": {
+      "description": "8172684751:AAFrKOePs4i_8Zbo3OciESAnP40EVT9cQlQ",
+      "required": true
+    },
+    "BOT_USERNAME": {
+      "description": "Nooneknowswhoknows_bot",
+      "required": true
+    },
+    "OWNER_ID": {
+      "description": "8152589217",
+      "required": true
+    },
+    "SUDO_USERS": {
+      "description": "8152589217,6073936818",
+      "required": false
+    },
+    "CHANNEL_ID": {
+      "description": "-1002656120306",
+      "required": true
+    },
+    "MONGO_URL": {
+      "description": "mongodb+srv://MRDAXX:MRDAXX@mrdaxx.prky3aj.mongodb.net/?retryWrites=true&w=majority",
+      "required": true
+    },
+    "PREMIUM_LOGS": {
+      "description": "-1002630993737",
+      "required": true
+    }
+  },
+  "stack": "heroku-22",
+  "addons": [],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    },
+    {
+      "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+    }
+  ]
+}
