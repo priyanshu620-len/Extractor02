@@ -46,7 +46,7 @@ MAIN_BUTTONS = InlineKeyboardMarkup([
     ],
     [
         InlineKeyboardButton("📋 TXT → HTML", callback_data="txt_html"),
-        InlineKeyboardButton("👨‍💻 Developer", url=f"tg://user?id={8301160173}")
+        InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/ONeX_sell")
     ],
     [InlineKeyboardButton("📄 Get OMR", callback_data="get_omr")],
     [InlineKeyboardButton("❌ Close Menu", callback_data="home_")]
