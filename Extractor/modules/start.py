@@ -2,30 +2,34 @@ import re
 import random
 from pyrogram import filters
 from Extractor import app
-from config import OWNER_ID, SUDO_USERS, CHANNEL_ID
+from config import OWNER_ID, SUDO_USERS, CHANNEL_ID 
 from Extractor.core import script
 from Extractor.core.func import subscribe, chk_user
 from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
-from Extractor.modules.classplus import classplus_txt
-from Extractor.modules.exampur import exampur_txt
-from Extractor.modules.appex_v3 import appex_v3_txt
-from Extractor.modules.khan import khan_login
-from Extractor.modules.kdlive import kdlive
-from Extractor.modules.pw import  pw_login
-from Extractor.modules.careerwill import career_will
-from Extractor.modules.getappxotp import send_otp
-from Extractor.modules.findapi import findapis_extract
-from Extractor.modules.utk import handle_utk_logic
-from Extractor.modules.iq import handle_iq_logic
-from Extractor.modules.adda import adda_command_handler
 
-# -------------------------- UI TEXTS & CONFIG -------------------------- #
+# --- MODULE IMPORTS ---
+# Ensure these files exist in Extractor/modules/
+from Extractor.modules.appex_v3 import appex_v3_txt
+from Extractor.modules.classplus import classplus_txt
+from Extractor.modules.khan import khan_login
+from Extractor.modules.pw import pw_login
+# ----------------------
+
+# -------------------------- DATABASE & CONFIG -------------------------- #
+USER_STATS = {} 
+
+# Har menu ke liye custom images (Optional: script.IMG se random bhi le sakte hain)
+IMG_MAIN = random.choice(script.IMG) if script.IMG else "https://chatgpt.com/s/m_6999decf874c8191abd2b4600b8ab2ce"
+
+# -------------------------- UI TEXTS -------------------------- #
 
 def get_main_caption(name, user_id):
+    stats = USER_STATS.get(user_id, 0)
     return f"""💎 **Welcome to Premium Extractor Bot** 💎
 ━━━━━━━━━━━━━━━━━━━━━━━━
 👤 **User:** {name}
 🆔 **ID:** `{user_id}`
+📊 **Extractions:** `{stats}`
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ⚙️ **Choose your mode below:**
 
@@ -38,6 +42,7 @@ def get_main_caption(name, user_id):
 
 # -------------------------- KEYBOARDS -------------------------- #
 
+# Main Menu (Image 2 style)
 MAIN_BUTTONS = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("🔐 Login Required", callback_data="login_section"),
@@ -49,7 +54,7 @@ MAIN_BUTTONS = InlineKeyboardMarkup([
     ],
     [
         InlineKeyboardButton("📋 TXT → HTML", callback_data="txt_html"),
-        InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/ONeX_sell")
+        InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/ONeX_sell") 
     ],
     [
         InlineKeyboardButton("📊 My Stats", callback_data="view_stats"),
@@ -57,11 +62,12 @@ MAIN_BUTTONS = InlineKeyboardMarkup([
     ]
 ])
 
+# Login Required Menu
 LOGIN_BUTTONS = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("📲 AppX", callback_data="appx_login"),
-        InlineKeyboardButton("📱 AppX V2", callback_data="appx_v2"),
-        InlineKeyboardButton("📲 AppX V3", callback_data="appx_v3")
+        InlineKeyboardButton("📱 AppX V2", callback_data="appx_v2_trigger"),
+        InlineKeyboardButton("📲 AppX V3", callback_data="appx_v3_trigger") 
     ],
     [
         InlineKeyboardButton("🌱 CP Without Test", callback_data="cp_no_test"),
@@ -82,6 +88,7 @@ LOGIN_BUTTONS = InlineKeyboardMarkup([
     [InlineKeyboardButton("⬅️ Back to main menu", callback_data="back_to_main")]
 ])
 
+# Without Login - Page 1
 PAGE_1 = InlineKeyboardMarkup([
     [InlineKeyboardButton("👑 Premium++", callback_data="prem_plus")],
     [InlineKeyboardButton("🔐 VideoCrypt", callback_data="videocrypt")],
@@ -116,6 +123,7 @@ PAGE_1 = InlineKeyboardMarkup([
     ]
 ])
 
+# Without Login - Page 2
 PAGE_2 = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("🧮 Verbal Maths", callback_data="v_maths"),
@@ -156,6 +164,7 @@ PAGE_2 = InlineKeyboardMarkup([
     ]
 ])
 
+# Teach Zone Menu
 TEACH_ZONE_MENU = InlineKeyboardMarkup([
     [InlineKeyboardButton("📚 Study Azadi", callback_data="s_azadi"), InlineKeyboardButton("🏫 Bishewari Study Centre", callback_data="bishewari")],
     [InlineKeyboardButton("📘 Aarohi Online Classes", callback_data="aarohi"), InlineKeyboardButton("🎓 Alisira Academy", callback_data="alisira")],
@@ -170,19 +179,24 @@ TEACH_ZONE_MENU = InlineKeyboardMarkup([
     [InlineKeyboardButton("⬅️ Back to W/O", callback_data="page_1")]
 ])
 
-# -------------------------- HANDLERS -------------------------- #
+# -------------------------- LOGGING & HANDLERS -------------------------- #
 
 async def log_user_activity(user):
-    try: await app.send_message(CHANNEL_ID, f"#StartActivity\n👤 **User:** {user.first_name}\n🆔 `{user.id}`")
+    if user.id not in USER_STATS:
+        USER_STATS[user.id] = 0
+    try:
+        # Logging details
+        await app.send_message(CHANNEL_ID, f"#StartActivity\n👤 **User:** {user.first_name}\n🆔 `{user.id}`\n🔗 @{user.username if user.username else 'None'}") 
     except: pass
 
 @app.on_message(filters.command(["start", "apps"]))
 async def start_cmd(_, message):
     join = await subscribe(_, message)
     if join == 1: return
+    
     await log_user_activity(message.from_user)
     caption = get_main_caption(message.from_user.first_name, message.from_user.id)
-    await message.reply_photo(photo=random.choice(script.IMG), caption=caption, reply_markup=MAIN_BUTTONS)
+    await message.reply_photo(photo=IMG_MAIN, caption=caption, reply_markup=MAIN_BUTTONS)
 
 @app.on_callback_query()
 async def handle_callback(_, query):
@@ -191,13 +205,42 @@ async def handle_callback(_, query):
 
     if data == "back_to_main":
         await query.message.edit_caption(caption=get_main_caption(u_name, u_id), reply_markup=MAIN_BUTTONS)
+    
     elif data == "login_section":
         await query.message.edit_caption(caption="🔐 **Login Required Menu**", reply_markup=LOGIN_BUTTONS)
+
     elif data == "page_1":
         await query.message.edit_caption(caption="📂 **Without Login Menu - Page 1**", reply_markup=PAGE_1)
+
     elif data == "page_2":
         await query.message.edit_caption(caption="📂 **Without Login Menu - Page 2**", reply_markup=PAGE_2)
+
     elif data == "teach_zone_menu":
         await query.message.edit_caption(caption="🎓 **Teach Zone Platforms**", reply_markup=TEACH_ZONE_MENU)
+
+    elif data == "view_stats":
+        stats = USER_STATS.get(u_id, 0)
+        await query.answer(f"📊 Stats: Aapne {stats} extractions ki hain!", show_alert=True)
+
+    # --- EXTRACTION TRIGGERS ---
+    elif data == "appx_v3_trigger":
+        await query.message.delete()
+        # Fixed module call
+        await appex_v3_txt(app, query.message) 
+
     elif data == "home_":
         await query.message.delete()
+
+# -------------------------- ADMIN BROADCAST -------------------------- #
+
+@app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
+async def broadcast_handler(_, message):
+    if not message.reply_to_message:
+        return await message.reply_text("Reply to a message with /broadcast")
+    count = 0
+    for user_id in USER_STATS.keys():
+        try:
+            await message.reply_to_message.copy(user_id)
+            count += 1
+        except: pass
+    await message.reply_text(f"✅ Broadcast complete to {count} users.")
