@@ -38,7 +38,6 @@ def get_main_caption(name, user_id):
 
 # -------------------------- KEYBOARDS -------------------------- #
 
-# Main Menu
 MAIN_BUTTONS = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("🔐 Login Required", callback_data="login_section"),
@@ -58,7 +57,6 @@ MAIN_BUTTONS = InlineKeyboardMarkup([
     ]
 ])
 
-# Login Required Menu (Warning Removed)
 LOGIN_BUTTONS = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("📲 AppX", callback_data="appx_login"),
@@ -84,7 +82,6 @@ LOGIN_BUTTONS = InlineKeyboardMarkup([
     [InlineKeyboardButton("⬅️ Back to main menu", callback_data="back_to_main")]
 ])
 
-# Without Login - Page 1
 PAGE_1 = InlineKeyboardMarkup([
     [InlineKeyboardButton("👑 Premium++", callback_data="prem_plus")],
     [InlineKeyboardButton("🔐 VideoCrypt", callback_data="videocrypt")],
@@ -119,7 +116,6 @@ PAGE_1 = InlineKeyboardMarkup([
     ]
 ])
 
-# Without Login - Page 2
 PAGE_2 = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("🧮 Verbal Maths", callback_data="v_maths"),
@@ -135,4 +131,73 @@ PAGE_2 = InlineKeyboardMarkup([
     ],
     [
         InlineKeyboardButton("📘 Prep-Online", callback_data="prep_o"),
-        InlineKeyboardButton("⌨️ Taiyari Karlo", callback_data="taiy
+        InlineKeyboardButton("⌨️ Taiyari Karlo", callback_data="taiyari")
+    ],
+    [
+        InlineKeyboardButton("🔬 Repro Neet", callback_data="repro"),
+        InlineKeyboardButton("⚡ Sambhavam IAS", callback_data="sambhavam")
+    ],
+    [
+        InlineKeyboardButton("🧬 IFAS Edutech", callback_data="ifas"),
+        InlineKeyboardButton("🩺 AyurGuide v2", callback_data="ayur")
+    ],
+    [
+        InlineKeyboardButton("🏫 G.S. Vision", callback_data="gs_v"),
+        InlineKeyboardButton("✨ Future Kul", callback_data="future")
+    ],
+    [
+        InlineKeyboardButton("✨ Sarvam Online", callback_data="sarvam"),
+        InlineKeyboardButton("🔥 N Prep", callback_data="n_prep")
+    ],
+    [InlineKeyboardButton("🔐 TNC Nursing", callback_data="tnc")],
+    [
+        InlineKeyboardButton("⬅️ Back Page", callback_data="page_1"),
+        InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")
+    ]
+])
+
+TEACH_ZONE_MENU = InlineKeyboardMarkup([
+    [InlineKeyboardButton("📚 Study Azadi", callback_data="s_azadi"), InlineKeyboardButton("🏫 Bishewari Study Centre", callback_data="bishewari")],
+    [InlineKeyboardButton("📘 Aarohi Online Classes", callback_data="aarohi"), InlineKeyboardButton("🎓 Alisira Academy", callback_data="alisira")],
+    [InlineKeyboardButton("👩‍🏫 Bhanu Sir Academy", callback_data="bhanu_sir"), InlineKeyboardButton("🪜 Bridge To Success", callback_data="bridge")],
+    [InlineKeyboardButton("🌎 Divya Straglobal Study", callback_data="divya"), InlineKeyboardButton("💡 Econominds", callback_data="econominds")],
+    [InlineKeyboardButton("🛡️ Exam Kavach", callback_data="exam_k"), InlineKeyboardButton("🏛️ Ganga Var Institute", callback_data="ganga_var")],
+    [InlineKeyboardButton("🎯 Janata Career Classes", callback_data="janata"), InlineKeyboardButton("📖 Jiya Jiyan Shinavodaya", callback_data="jiya_j")],
+    [InlineKeyboardButton("🏫 National Academy", callback_data="national"), InlineKeyboardButton("📈 Study Trend", callback_data="s_trend")],
+    [InlineKeyboardButton("⚡ Study Mafia", callback_data="s_mafia"), InlineKeyboardButton("🧠 Teaching Job Mantra", callback_data="t_job")],
+    [InlineKeyboardButton("🚀 The Fastest Academy", callback_data="fastest"), InlineKeyboardButton("📐 Vishal Sir Maths", callback_data="vishal_sir")],
+    [InlineKeyboardButton("🧩 Saurav Tutorial", callback_data="saurav")],
+    [InlineKeyboardButton("⬅️ Back to W/O", callback_data="page_1")]
+])
+
+# -------------------------- HANDLERS -------------------------- #
+
+async def log_user_activity(user):
+    try: await app.send_message(CHANNEL_ID, f"#StartActivity\n👤 **User:** {user.first_name}\n🆔 `{user.id}`")
+    except: pass
+
+@app.on_message(filters.command(["start", "apps"]))
+async def start_cmd(_, message):
+    join = await subscribe(_, message)
+    if join == 1: return
+    await log_user_activity(message.from_user)
+    caption = get_main_caption(message.from_user.first_name, message.from_user.id)
+    await message.reply_photo(photo=random.choice(script.IMG), caption=caption, reply_markup=MAIN_BUTTONS)
+
+@app.on_callback_query()
+async def handle_callback(_, query):
+    data = query.data
+    u_name, u_id = query.from_user.first_name, query.from_user.id
+
+    if data == "back_to_main":
+        await query.message.edit_caption(caption=get_main_caption(u_name, u_id), reply_markup=MAIN_BUTTONS)
+    elif data == "login_section":
+        await query.message.edit_caption(caption="🔐 **Login Required Menu**", reply_markup=LOGIN_BUTTONS)
+    elif data == "page_1":
+        await query.message.edit_caption(caption="📂 **Without Login Menu - Page 1**", reply_markup=PAGE_1)
+    elif data == "page_2":
+        await query.message.edit_caption(caption="📂 **Without Login Menu - Page 2**", reply_markup=PAGE_2)
+    elif data == "teach_zone_menu":
+        await query.message.edit_caption(caption="🎓 **Teach Zone Platforms**", reply_markup=TEACH_ZONE_MENU)
+    elif data == "home_":
+        await query.message.delete()
