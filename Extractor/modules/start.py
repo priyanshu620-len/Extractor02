@@ -37,7 +37,6 @@ def save_sudo_users(data):
 SUDO_DATA = load_sudo_users()
 
 def is_premium(user_id):
-    """Checks if user has active premium time"""
     u_id_str = str(user_id)
     if int(user_id) == OWNER_ID:
         return True
@@ -52,7 +51,7 @@ def is_premium(user_id):
 
 # -------------------------- HELPERS -------------------------- #
 
-async def safe_edit(query, caption, reply_markup):
+async def safe_edit(query, caption, reply_markup=None):
     try:
         await query.message.edit_caption(caption=caption, reply_markup=reply_markup)
     except Exception as e:
@@ -148,7 +147,7 @@ async def start_cmd(_, message):
     if u_id not in USER_STATS: USER_STATS[u_id] = 0
     await message.reply_photo(photo=IMG_MAIN, caption=get_main_caption(u_name, u_id), reply_markup=MAIN_BUTTONS)
 
-# -------------------------- CALLBACK HANDLER (FIXED) -------------------------- #
+# -------------------------- CALLBACK HANDLER -------------------------- #
 
 @app.on_callback_query()
 async def handle_callback(_, query):
@@ -174,4 +173,57 @@ async def handle_callback(_, query):
             list_text += "\n📝 **Send batch number to extract**"
             await safe_edit(query, list_text, PAGE_2)
         except Exception as e:
-            await safe_edit(query, f"⚠️ Error:
+            await safe_edit(query, f"⚠️ Error: {str(e)}", PAGE_2)
+    elif data == "home_":
+        await query.message.delete()
+
+# -------------------------- EXTRACTION HANDLER -------------------------- #
+
+@app.on_message(filters.text & filters.incoming & filters.private)
+async def batch_number_handler(client, message):
+    u_id = message.from_user.id
+    text = message.text.strip()
+    if text.isdigit():
+        if not is_premium(u_id):
+            return await message.reply("❌ **Premium Required!** Type /check")
+        try:
+            batches = sw1.fetch_active_batches()
+            index = int(text) - 1
+            if 0 <= index < len(batches):
+                selected_batch = batches[index]
+                course_id = selected_batch.get('id')
+                status = await message.reply("⚡ **Please wait...**")
+                start_time = time.time()
+                res = sw1.get_final_data(course_id, mode="1")
+                if res.get("text"):
+                    file = io.BytesIO(res["text"].encode())
+                    c_name = res.get("title", "Batch")
+                    file.name = f"{c_name.replace(' ', '_')}_enc.txt"
+                    
+                    report = f"""
+✨ **𝖲𝖤𝖫𝖤𝖢𝖳𝖨𝖮𝖭 𝖶𝖠𝖸 𝖤𝖷𝖳𝖱𝖠𝖢𝖳𝖨𝖮𝖭** ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+> 📚 **𝖡𝖺𝗍𝖼𝗁:** `{c_name}`
+> 🆔 **𝖨𝖣:** `{course_id}`
+> ━━━━━━━━━━━━━━━━━━━━━━━━
+> ◈ 📱 **𝖠𝗉𝗉:** Selection Way
+> ◈ 📂 **𝖢𝗈𝗇𝗍𝖾𝗇𝗍:** {res.get('total', 0)} Items
+> ◈ 📹 **𝖵𝗂𝖽𝖾𝗈𝗌:** {res.get('videos', 0)}  |  📄 **𝖯𝖣𝖥𝗌:** {res.get('pdfs', 0)}
+> ━━━━━━━━━━━━━━━━━━━━━━━━
+> ⏱️ **𝖳𝗂𝗆𝖾:** {int(time.time() - start_time)}s
+> 📅 **𝖣𝖺𝗍𝖾:** {datetime.now().strftime('%d-%m-%Y  %H:%M:%S')}
+> 🖼️ **𝖳𝗁𝗎𝗆𝖻:** [𝖢𝗅𝗂𝖼𝗄 𝖧𝖾𝗋𝖾 𝖳𝗈 𝖵𝗂𝖾𝗐](https://telegra.ph/file/default_image.jpg)
+> ━━━━━━━━━━━━━━━━━━━━━━━━
+> 👤 **𝖴𝗌𝖾𝗋:** `{u_id}`
+> 🔗 **𝖡𝗒:** 𓆩 𝓞𝓝𝓮𝓧 𓆪 🐺
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+                    await message.reply_document(document=file, caption=report)
+                    await status.delete()
+                    USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
+                else:
+                    await status.edit("❌ No links found!")
+            else:
+                await message.reply("❌ Invalid number! Please choose from the list.")
+        except Exception as e:
+            await message.reply(f"⚠️ Error: {str(e)}")
