@@ -190,26 +190,60 @@ async def handle_callback(_, query):
     elif data == "page_2":
         await query.message.edit_caption(caption="📂 **Without Login Menu - Page 2**", reply_markup=PAGE_2)
 
-    # --- SW1.PY TRIGGER WITH PREMIUM FILTER ---
+   # --- SW1.PY TRIGGER WITH PREMIUM FILTER ---
     elif data == "selection_w":
-        # Check if user is Premium/Sudo
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
-            return await query.answer("❌ This is a Premium Feature! Contact @ONeX_sell to upgrade.", show_alert=True)
+            return await query.answer("❌ Premium Feature! Contact @ONeX_sell", show_alert=True)
 
-        await query.answer("🔎 Fetching your batches...")
+        await query.answer("🔎 Fetching batches...")
         try:
-            # sw1.py se batches fetch karna
-            batches = sw1.fetch_active_batches() 
+            batches = sw1.fetch_active_batches()
             if not batches:
                 await query.message.edit_caption(caption="❌ No active batches found.", reply_markup=PAGE_2)
                 return
 
             buttons = []
             for b in batches:
-                # Callback format: sw_[ID]_[NAME]
-                buttons.append([InlineKeyboardButton(f"📁 {b.get('title')[:25]}", callback_data=f"sw_{b.get('id')}_{b.get('title')[:15]}")])
+                # Sirf ID bhej rahe hain taaki 64 byte ki limit cross na ho
+                b_id = b.get('id')
+                b_name = b.get('title')[:25]
+                buttons.append([InlineKeyboardButton(f"📁 {b_name}", callback_data=f"sw_{b_id}")])
             
             buttons.append([InlineKeyboardButton("⬅️ Back", callback_data="page_2")])
-            await query.message.edit_caption(caption="📚 **Choose Batch to Extract TXT:**", reply_markup=InlineKeyboardMarkup(buttons))
+            
+            # MessageNotModified error se bachne ke liye try-except
+            try:
+                await query.message.edit_caption(
+                    caption="📚 **Choose Batch to Extract TXT:**",
+                    reply_markup=InlineKeyboardMarkup(buttons)
+                )
+            except Exception:
+                pass # Same content hai toh ignore karein
+
         except Exception as e:
             await query.message.edit_caption(caption=f"⚠️ Error: {str(e)}", reply_markup=PAGE_2)
+
+    # Extraction Logic (Updated for shorter callback)
+    elif data.startswith("sw_"):
+        if u_id not in SUDO_USERS and u_id != OWNER_ID:
+            return await query.answer("❌ Access Denied!", show_alert=True)
+
+        # Ab sirf ID extract kar rahe hain
+        course_id = data.split("_")[1]
+        
+        await query.answer("⏳ Extracting links...", show_alert=False)
+        await query.message.edit_caption(caption=f"⏳ **Extracting Links...**\nPlease wait a moment.")
+        
+        try:
+            links = sw1.get_final_data(course_id, mode="1")
+            if links:
+                file = io.BytesIO(links.encode())
+                file.name = f"Batch_{course_id}.txt"
+                
+                await query.message.reply_document(document=file, caption=f"✅ **Extraction Done!**\nID: `{course_id}`")
+                USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
+                await query.message.delete()
+            else:
+                await query.message.edit_caption(caption="❌ No links found in this batch.", reply_markup=PAGE_2)
+        except Exception as e:
+            await query.message.edit_caption(caption=f"⚠️ Extraction Error: {str(e)}", reply_markup=PAGE_2)
