@@ -3,6 +3,21 @@ import json
 
 BASE_URL = "https://backend.multistreaming.site/api"
 
+# ========== FETCH COURSE NAME BY ID ==========
+def get_course_name(course_id, user_id="3708939"):
+    """Fetches original batch title using ID to avoid button data errors"""
+    try:
+        url = f"{BASE_URL}/courses/active?userId={user_id}"
+        res = requests.get(url)
+        res.raise_for_status()
+        batches = res.json().get("data", [])
+        for b in batches:
+            if str(b.get("id")) == str(course_id):
+                return b.get("title", "Unknown_Batch")
+    except Exception:
+        pass
+    return "Batch"
+
 # ========== FETCH ACTIVE COURSES ==========
 def fetch_active_batches(user_id="3708939"):
     url = f"{BASE_URL}/courses/active?userId={user_id}"
@@ -39,8 +54,6 @@ def fetch_classes(course_id):
             if video_link:
                 all_classes.append(f"{topic_name} | {title} ({teacher}) : {video_link}")
 
-            # Note: Classes ke andar ke PDFs ko bhi yahan PDF count mein lene ke liye logic
-            # Hum isse fetch_classes mein hi rakhenge par iski entry format alag rakhenge
             for pdf in cls.get("classPdf", []):
                 name = pdf.get("name", "")
                 link = pdf.get("url", "")
@@ -71,30 +84,27 @@ def fetch_pdfs(course_id):
 
 # ========== BOT INTEGRATION FUNCTION ==========
 def get_final_data(course_id, mode="1"):
-    # Fetching data
     classes_list = fetch_classes(course_id)
     pdfs_list = fetch_pdfs(course_id)
     
-    # Combined text format
     combined_data = classes_list + pdfs_list
     final_text = "\n".join(combined_data)
     
-    # Logic for professional report counts
     video_count = 0
     pdf_count = 0
-    
     for item in combined_data:
-        if "(PDF) :" in item or "uploadPdf" in item or ".pdf" in item.lower():
+        if "(PDF) :" in item:
             pdf_count += 1
         else:
             video_count += 1
             
-    # Returning data and counts as a dictionary
-    report_data = {
+    # Asli Batch Title nikalna
+    real_title = get_course_name(course_id)
+            
+    return {
         "text": final_text,
         "total": len(combined_data),
         "videos": video_count,
-        "pdfs": pdf_count
+        "pdfs": pdf_count,
+        "title": real_title
     }
-    
-    return report_data
