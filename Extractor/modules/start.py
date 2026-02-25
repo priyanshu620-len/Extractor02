@@ -134,13 +134,14 @@ async def handle_callback(_, query):
         await safe_edit(query, "📂 **Without Login Menu - Page 2**", PAGE_2)
 
     # --- NOVA STYLE TRIGGER ---
+    # --- SELECTION WAY: BATCH LISTING ---
     elif data == "selection_w":
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
             return await query.answer("❌ Premium Feature! Contact @ONeX_sell", show_alert=True)
 
         await query.answer("🔎 Fetching batches...", show_alert=False)
         try:
-            batches = sw1.fetch_active_batches()
+            batches = sw1.fetch_active_batches() 
             if not batches:
                 await safe_edit(query, "❌ No active batches found.", PAGE_2)
                 return
@@ -149,7 +150,8 @@ async def handle_callback(_, query):
             for b in batches:
                 b_id = b.get('id')
                 b_name = b.get('title')[:25]
-                buttons.append([InlineKeyboardButton(f"📁 {b_name}", callback_data=f"sw_{b_id}_{b_name[:15]}")])
+                # Yahan humne callback data se name hata diya hai taaki 64-byte limit cross na ho
+                buttons.append([InlineKeyboardButton(f"📁 {b_name}", callback_data=f"sw_{b_id}")])
             
             buttons.append([InlineKeyboardButton("⬅️ Back", callback_data="page_2")])
             await safe_edit(query, "📚 **Available Batches:**\nSelect a batch to extract:", InlineKeyboardMarkup(buttons))
@@ -157,26 +159,33 @@ async def handle_callback(_, query):
         except Exception as e:
             await safe_edit(query, f"⚠️ Error: {str(e)}", PAGE_2)
 
+    # --- SELECTION WAY: NOVA STYLE EXTRACTION REPORT ---
     elif data.startswith("sw_"):
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
             return await query.answer("❌ Access Denied!", show_alert=True)
 
-        parts = data.split("_")
-        course_id, c_name = parts[1], parts[2] if len(parts) > 2 else "Batch"
+        # Ab hum sirf ID nikalenge, Name sw1.py se fetch hoga
+        course_id = data.split("_")[1]
         
         start_time = time.time()
         await query.answer("⏳ Extraction Shuru...", show_alert=False)
-        await safe_edit(query, "⚡ Please wait, your file will be sent soon... ⚡", None)
+        await safe_edit(query, "⚡ **Please wait, your file will be sent soon...** ⚡", None)
         
         try:
-            res = sw1.get_final_data(course_id, mode="1")
-            if res["text"]:
-                file = io.BytesIO(res["text"].encode())
-                file.name = f"{c_name}_enc.txt"
+            # sw1.py se dictionary data lena
+            res = sw1.get_final_data(course_id, mode="1") 
+            links = res["text"]
+            c_name = res["title"] # sw1.py se asli lamba naam fetch ho raha hai
+            
+            if links:
+                file = io.BytesIO(links.encode())
+                # File name se spaces hata kar professional format dena
+                file.name = f"{c_name.replace(' ', '_')}_enc.txt"
                 
                 time_taken = f"{int(time.time() - start_time)}s"
                 current_dt = datetime.now().strftime('%d-%m-%Y  %H:%M:%S')
                 
+                # Professional Report Caption (New sw1.py counts ke saath)
                 report = f"""
 ⚡ **Selection Way Extraction Report** ⚡
 
@@ -200,8 +209,7 @@ async def handle_callback(_, query):
                 await query.message.delete()
             else:
                 await query.answer("❌ No links found!", show_alert=True)
-        except Exception as e:
-            await safe_edit(query, f"⚠️ Error: {str(e)}", PAGE_2)
+                await safe_edit(query, "❌ Is batch mein koi data nahi mila.", PAGE_2)
 
-    elif data == "home_":
-        await query.message.delete()
+        except Exception as e:
+            await safe_edit(query, f"⚠️ Extraction Error: {str(e)}", PAGE_2)
