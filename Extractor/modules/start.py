@@ -1,25 +1,25 @@
 import re
+import io
 import random
-from pyrogram import filters
+import asyncio
+from pyrogram import Client, filters
+from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+
 from Extractor import app
 from config import OWNER_ID, SUDO_USERS, CHANNEL_ID 
 from Extractor.core import script
 from Extractor.core.func import subscribe, chk_user
-from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 
 # --- MODULE IMPORTS ---
-# Ensure these files exist in Extractor/modules/
+import sw1 # Ensure sw1.py is in the same folder or modules folder
 from Extractor.modules.appex_v3 import appex_v3_txt
 from Extractor.modules.classplus import classplus_txt
 from Extractor.modules.khan import khan_login
 from Extractor.modules.pw import pw_login
-# ----------------------
 
 # -------------------------- DATABASE & CONFIG -------------------------- #
 USER_STATS = {} 
-
-# Har menu ke liye custom images (Optional: script.IMG se random bhi le sakte hain)
-IMG_MAIN = random.choice(script.IMG) if script.IMG else "https://chatgpt.com/s/m_6999decf874c8191abd2b4600b8ab2ce"
+IMG_MAIN = random.choice(script.IMG) if script.IMG else "https://telegra.ph/file/default_image.jpg"
 
 # -------------------------- UI TEXTS -------------------------- #
 
@@ -42,7 +42,6 @@ def get_main_caption(name, user_id):
 
 # -------------------------- KEYBOARDS -------------------------- #
 
-# Main Menu (Image 2 style)
 MAIN_BUTTONS = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("🔐 Login Required", callback_data="login_section"),
@@ -62,7 +61,6 @@ MAIN_BUTTONS = InlineKeyboardMarkup([
     ]
 ])
 
-# Login Required Menu
 LOGIN_BUTTONS = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("📲 AppX", callback_data="appx_login"),
@@ -88,7 +86,6 @@ LOGIN_BUTTONS = InlineKeyboardMarkup([
     [InlineKeyboardButton("⬅️ Back to main menu", callback_data="back_to_main")]
 ])
 
-# Without Login - Page 1
 PAGE_1 = InlineKeyboardMarkup([
     [InlineKeyboardButton("👑 Premium++", callback_data="prem_plus")],
     [InlineKeyboardButton("🔐 VideoCrypt", callback_data="videocrypt")],
@@ -123,7 +120,6 @@ PAGE_1 = InlineKeyboardMarkup([
     ]
 ])
 
-# Without Login - Page 2
 PAGE_2 = InlineKeyboardMarkup([
     [
         InlineKeyboardButton("🧮 Verbal Maths", callback_data="v_maths"),
@@ -135,7 +131,7 @@ PAGE_2 = InlineKeyboardMarkup([
     ],
     [
         InlineKeyboardButton("🏆 Rank Plus", callback_data="rank_p"),
-        InlineKeyboardButton("🎯 Selection Way", callback_data="selection_w")
+        InlineKeyboardButton("🎯 Selection Way", callback_data="selection_w") 
     ],
     [
         InlineKeyboardButton("📘 Prep-Online", callback_data="prep_o"),
@@ -164,38 +160,17 @@ PAGE_2 = InlineKeyboardMarkup([
     ]
 ])
 
-# Teach Zone Menu
-TEACH_ZONE_MENU = InlineKeyboardMarkup([
-    [InlineKeyboardButton("📚 Study Azadi", callback_data="s_azadi"), InlineKeyboardButton("🏫 Bishewari Study Centre", callback_data="bishewari")],
-    [InlineKeyboardButton("📘 Aarohi Online Classes", callback_data="aarohi"), InlineKeyboardButton("🎓 Alisira Academy", callback_data="alisira")],
-    [InlineKeyboardButton("👩‍🏫 Bhanu Sir Academy", callback_data="bhanu_sir"), InlineKeyboardButton("🪜 Bridge To Success", callback_data="bridge")],
-    [InlineKeyboardButton("🌎 Divya Straglobal Study", callback_data="divya"), InlineKeyboardButton("💡 Econominds", callback_data="econominds")],
-    [InlineKeyboardButton("🛡️ Exam Kavach", callback_data="exam_k"), InlineKeyboardButton("🏛️ Ganga Var Institute", callback_data="ganga_var")],
-    [InlineKeyboardButton("🎯 Janata Career Classes", callback_data="janata"), InlineKeyboardButton("📖 Jiya Jiyan Shinavodaya", callback_data="jiya_j")],
-    [InlineKeyboardButton("🏫 National Academy", callback_data="national"), InlineKeyboardButton("📈 Study Trend", callback_data="s_trend")],
-    [InlineKeyboardButton("⚡ Study Mafia", callback_data="s_mafia"), InlineKeyboardButton("🧠 Teaching Job Mantra", callback_data="t_job")],
-    [InlineKeyboardButton("🚀 The Fastest Academy", callback_data="fastest"), InlineKeyboardButton("📐 Vishal Sir Maths", callback_data="vishal_sir")],
-    [InlineKeyboardButton("🧩 Saurav Tutorial", callback_data="saurav")],
-    [InlineKeyboardButton("⬅️ Back to W/O", callback_data="page_1")]
-])
-
-# -------------------------- LOGGING & HANDLERS -------------------------- #
-
-async def log_user_activity(user):
-    if user.id not in USER_STATS:
-        USER_STATS[user.id] = 0
-    try:
-        # Logging details
-        await app.send_message(CHANNEL_ID, f"#StartActivity\n👤 **User:** {user.first_name}\n🆔 `{user.id}`\n🔗 @{user.username if user.username else 'None'}") 
-    except: pass
+# -------------------------- HANDLERS -------------------------- #
 
 @app.on_message(filters.command(["start", "apps"]))
 async def start_cmd(_, message):
     join = await subscribe(_, message)
     if join == 1: return
     
-    await log_user_activity(message.from_user)
-    caption = get_main_caption(message.from_user.first_name, message.from_user.id)
+    u_name, u_id = message.from_user.first_name, message.from_user.id
+    if u_id not in USER_STATS: USER_STATS[u_id] = 0
+    
+    caption = get_main_caption(u_name, u_id)
     await message.reply_photo(photo=IMG_MAIN, caption=caption, reply_markup=MAIN_BUTTONS)
 
 @app.on_callback_query()
@@ -215,32 +190,8 @@ async def handle_callback(_, query):
     elif data == "page_2":
         await query.message.edit_caption(caption="📂 **Without Login Menu - Page 2**", reply_markup=PAGE_2)
 
-    elif data == "teach_zone_menu":
-        await query.message.edit_caption(caption="🎓 **Teach Zone Platforms**", reply_markup=TEACH_ZONE_MENU)
-
-    elif data == "view_stats":
-        stats = USER_STATS.get(u_id, 0)
-        await query.answer(f"📊 Stats: Aapne {stats} extractions ki hain!", show_alert=True)
-
-    # --- EXTRACTION TRIGGERS ---
-    elif data == "appx_v3_trigger":
-        await query.message.delete()
-        # Fixed module call
-        await appex_v3_txt(app, query.message) 
-
-    elif data == "home_":
-        await query.message.delete()
-
-# -------------------------- ADMIN BROADCAST -------------------------- #
-
-@app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
-async def broadcast_handler(_, message):
-    if not message.reply_to_message:
-        return await message.reply_text("Reply to a message with /broadcast")
-    count = 0
-    for user_id in USER_STATS.keys():
-        try:
-            await message.reply_to_message.copy(user_id)
-            count += 1
-        except: pass
-    await message.reply_text(f"✅ Broadcast complete to {count} users.")
+    # --- SW1.PY TRIGGER WITH PREMIUM FILTER ---
+    elif data == "selection_w":
+        # Check if user is Premium/Sudo
+        if u_id not in SUDO_USERS and u_id != OWNER_ID:
+            return await query.answer("❌ This is a Premium Feature! Contact @ONeX_sell
