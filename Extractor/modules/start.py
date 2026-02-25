@@ -1,9 +1,11 @@
 import re
 import io
+import time
 import random
 import asyncio
+from datetime import datetime
 from pyrogram import Client, filters
-from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
+from pyrogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 from Extractor import app
 from config import OWNER_ID, SUDO_USERS, CHANNEL_ID 
@@ -11,11 +13,7 @@ from Extractor.core import script
 from Extractor.core.func import subscribe, chk_user
 
 # --- MODULE IMPORTS ---
-from Extractor.modules import sw1 # Ensure sw1.py is in the same folder or modules folder
-from Extractor.modules.appex_v3 import appex_v3_txt
-from Extractor.modules.classplus import classplus_txt
-from Extractor.modules.khan import khan_login
-from Extractor.modules.pw import pw_login
+from Extractor.modules import sw1 
 
 # -------------------------- DATABASE & CONFIG -------------------------- #
 USER_STATS = {} 
@@ -59,31 +57,6 @@ MAIN_BUTTONS = InlineKeyboardMarkup([
         InlineKeyboardButton("📊 My Stats", callback_data="view_stats"),
         InlineKeyboardButton("❌ Close Menu", callback_data="home_")
     ]
-])
-
-LOGIN_BUTTONS = InlineKeyboardMarkup([
-    [
-        InlineKeyboardButton("📲 AppX", callback_data="appx_login"),
-        InlineKeyboardButton("📱 AppX V2", callback_data="appx_v2_trigger"),
-        InlineKeyboardButton("📲 AppX V3", callback_data="appx_v3_trigger") 
-    ],
-    [
-        InlineKeyboardButton("🌱 CP Without Test", callback_data="cp_no_test"),
-        InlineKeyboardButton("🏫 CP With Test", callback_data="cp_test")
-    ],
-    [
-        InlineKeyboardButton("💎 Will Pappu", callback_data="will_pappu"),
-        InlineKeyboardButton("🧩 Gyan Academy", callback_data="gyan_acad")
-    ],
-    [
-        InlineKeyboardButton("📚 Khan Global Studies", callback_data="khan_"),
-        InlineKeyboardButton("🚧 Fliqi Tech", callback_data="fliqi")
-    ],
-    [
-        InlineKeyboardButton("🌐 Appx API", callback_data="appx_api"),
-        InlineKeyboardButton("🌐 WebSankul", callback_data="websankul")
-    ],
-    [InlineKeyboardButton("⬅️ Back to main menu", callback_data="back_to_main")]
 ])
 
 PAGE_1 = InlineKeyboardMarkup([
@@ -181,21 +154,18 @@ async def handle_callback(_, query):
     if data == "back_to_main":
         await query.message.edit_caption(caption=get_main_caption(u_name, u_id), reply_markup=MAIN_BUTTONS)
     
-    elif data == "login_section":
-        await query.message.edit_caption(caption="🔐 **Login Required Menu**", reply_markup=LOGIN_BUTTONS)
-
     elif data == "page_1":
         await query.message.edit_caption(caption="📂 **Without Login Menu - Page 1**", reply_markup=PAGE_1)
 
     elif data == "page_2":
         await query.message.edit_caption(caption="📂 **Without Login Menu - Page 2**", reply_markup=PAGE_2)
 
-   # --- SW1.PY TRIGGER WITH PREMIUM FILTER ---
+    # --- NOVA STYLE TRIGGER ---
     elif data == "selection_w":
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
-            return await query.answer("❌ Premium Feature! Contact @ONeX_sell", show_alert=True)
+            return await query.answer("❌ This is a Premium Feature! Contact @ONeX_sell to upgrade.", show_alert=True)
 
-        await query.answer("🔎 Fetching batches...")
+        await query.answer("🔎 Fetching batches...", show_alert=False)
         try:
             batches = sw1.fetch_active_batches()
             if not batches:
@@ -204,46 +174,73 @@ async def handle_callback(_, query):
 
             buttons = []
             for b in batches:
-                # Sirf ID bhej rahe hain taaki 64 byte ki limit cross na ho
                 b_id = b.get('id')
                 b_name = b.get('title')[:25]
-                buttons.append([InlineKeyboardButton(f"📁 {b_name}", callback_data=f"sw_{b_id}")])
+                # 64-byte limit ke liye callback chhota rakha hai
+                buttons.append([InlineKeyboardButton(f"📁 {b_name}", callback_data=f"sw_{b_id}_{b_name[:15]}")])
             
             buttons.append([InlineKeyboardButton("⬅️ Back", callback_data="page_2")])
             
-            # MessageNotModified error se bachne ke liye try-except
             try:
                 await query.message.edit_caption(
-                    caption="📚 **Choose Batch to Extract TXT:**",
+                    caption="📚 **Available Batches:**\n\nJis batch ka TXT chahiye use select karein:",
                     reply_markup=InlineKeyboardMarkup(buttons)
                 )
-            except Exception:
-                pass # Same content hai toh ignore karein
+            except Exception: pass
 
         except Exception as e:
             await query.message.edit_caption(caption=f"⚠️ Error: {str(e)}", reply_markup=PAGE_2)
 
-    # Extraction Logic (Updated for shorter callback)
     elif data.startswith("sw_"):
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
             return await query.answer("❌ Access Denied!", show_alert=True)
 
-        # Ab sirf ID extract kar rahe hain
-        course_id = data.split("_")[1]
+        parts = data.split("_")
+        course_id = parts[1]
+        c_name = parts[2] if len(parts) > 2 else "Batch"
         
-        await query.answer("⏳ Extracting links...", show_alert=False)
-        await query.message.edit_caption(caption=f"⏳ **Extracting Links...**\nPlease wait a moment.")
+        start_time = time.time()
+        await query.answer("⏳ Extraction Shuru...", show_alert=False)
+        await query.message.edit_caption(caption=f"⚡ Please wait, your file will be sent soon... ⚡")
         
         try:
-            links = sw1.get_final_data(course_id, mode="1")
+            # sw1.py se dictionary format wala data lena
+            res = sw1.get_final_data(course_id, mode="1") 
+            links = res["text"]
+            
             if links:
                 file = io.BytesIO(links.encode())
-                file.name = f"Batch_{course_id}.txt"
+                file.name = f"{c_name}_enc.txt"
                 
-                await query.message.reply_document(document=file, caption=f"✅ **Extraction Done!**\nID: `{course_id}`")
+                time_taken = f"{int(time.time() - start_time)}s"
+                current_dt = datetime.now().strftime('%d-%m-%Y  %H:%M:%S')
+                
+                # Professional Report Caption (As per screenshots)
+                report_caption = f"""
+⚡ **Selection Way Extraction Report** ⚡
+
+📚 **Batch Name:** `{c_name}`
+━━━━━━━━━━━━━━━━━━━━━━━━
+• 📱 **App:** Selection Way
+• 🆔 **Batch ID:** `{course_id}`
+• 🔗 **Total Content:** {res['total']}
+• 📹 **Videos:** {res['videos']} | 📄 **PDFs:** {res['pdfs']}
+• 🖼️ **Thumbnail:** [Click Here To View](https://telegra.ph/file/default_image.jpg)
+• ⏱️ **Total Time Taken:** {time_taken}
+• 📅 **Date-Time:** {current_dt}
+• 📄 **User ID:** `{u_id}`
+• 💬 **Username:** @{query.from_user.username if query.from_user.username else "None"}
+━━━━━━━━━━━━━━━━━━━━━━━━
+• 👤 **Extracted by:** 𝓞𝓝𝓮𝓧 🐺
+━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+                await query.message.reply_document(document=file, caption=report_caption)
                 USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
                 await query.message.delete()
             else:
-                await query.message.edit_caption(caption="❌ No links found in this batch.", reply_markup=PAGE_2)
+                await query.answer("❌ No links found!", show_alert=True)
         except Exception as e:
-            await query.message.edit_caption(caption=f"⚠️ Extraction Error: {str(e)}", reply_markup=PAGE_2)
+            await query.message.edit_caption(caption=f"⚠️ Error: {str(e)}", reply_markup=PAGE_2)
+
+    elif data == "home_":
+        await query.message.delete()
