@@ -194,4 +194,22 @@ async def handle_callback(_, query):
     elif data == "selection_w":
         # Check if user is Premium/Sudo
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
-            return await query.answer("❌ This is a Premium Feature! Contact @ONeX_sell
+            return await query.answer("❌ This is a Premium Feature! Contact @ONeX_sell to upgrade.", show_alert=True)
+
+        await query.answer("🔎 Fetching your batches...")
+        try:
+            # sw1.py se batches fetch karna
+            batches = sw1.fetch_active_batches() 
+            if not batches:
+                await query.message.edit_caption(caption="❌ No active batches found.", reply_markup=PAGE_2)
+                return
+
+            buttons = []
+            for b in batches:
+                # Callback format: sw_[ID]_[NAME]
+                buttons.append([InlineKeyboardButton(f"📁 {b.get('title')[:25]}", callback_data=f"sw_{b.get('id')}_{b.get('title')[:15]}")])
+            
+            buttons.append([InlineKeyboardButton("⬅️ Back", callback_data="page_2")])
+            await query.message.edit_caption(caption="📚 **Choose Batch to Extract TXT:**", reply_markup=InlineKeyboardMarkup(buttons))
+        except Exception as e:
+            await query.message.edit_caption(caption=f"⚠️ Error: {str(e)}", reply_markup=PAGE_2)
