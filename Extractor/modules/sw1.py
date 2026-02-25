@@ -4,8 +4,8 @@ import json
 BASE_URL = "https://backend.multistreaming.site/api"
 
 # ========== FETCH ACTIVE COURSES ==========
-def fetch_active_batches():
-    url = f"{BASE_URL}/courses/active?userId=3708939"
+def fetch_active_batches(user_id="3708939"):
+    url = f"{BASE_URL}/courses/active?userId={user_id}"
     res = requests.get(url)
     res.raise_for_status()
     data = res.json()
@@ -26,7 +26,7 @@ def fetch_classes(course_id):
         for cls in topic.get("classes", []):
             title = cls.get("title", "Untitled")
             teacher = cls.get("teacherName", "")
-            # prefer 720p if available
+            
             video_link = None
             mp4s = cls.get("mp4Recordings", [])
             for mp4 in mp4s:
@@ -39,7 +39,6 @@ def fetch_classes(course_id):
             if video_link:
                 all_classes.append(f"{topic_name} | {title} ({teacher}) : {video_link}")
 
-            # include class pdfs also
             for pdf in cls.get("classPdf", []):
                 name = pdf.get("name", "")
                 link = pdf.get("url", "")
@@ -86,48 +85,14 @@ def fetch_pdfs(course_id):
 
     return pdf_links
 
-# ========== MAIN FUNCTION ==========
-def main():
-    print("🔹 Fetching active batches...\n")
-    batches = fetch_active_batches()
-    if not batches:
-        print("⚠️ No batches found!")
-        return
-
-    for i, b in enumerate(batches, 1):
-        print(f"{i}) {b.get('title')}")
-
-    try:
-        choice = int(input("\n👉 Enter course number: "))
-        selected = batches[choice - 1]
-    except:
-        print("⚠️ Invalid choice")
-        return
-
-    title = selected.get("title", "Unknown")
-    course_id = selected.get("id")
-    print(f"\n📚 Selected: {title}")
-    print("1️⃣ Full Batch")
-    print("2️⃣ Today's Classes")
-    mode = input("👉 Choose (1/2): ").strip()
-
-    all_data = []
+# ========== BOT INTEGRATION FUNCTION ==========
+# Ye function aapka bot call karega
+def get_final_data(course_id, mode="1"):
+    combined_data = []
     if mode == "1":
-        print("\n🔹 Fetching all classes...")
-        all_data.extend(fetch_classes(course_id))
-        print("🔹 Fetching PDFs...")
-        all_data.extend(fetch_pdfs(course_id))
+        combined_data.extend(fetch_classes(course_id))
+        combined_data.extend(fetch_pdfs(course_id))
     else:
-        print("\n🔹 Fetching today's classes...")
-        all_data.extend(fetch_todays_classes(course_id))
-
-    filename = f"{title}.txt"
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write("\n".join(all_data))
-
-    print(f"\n✅ Saved successfully: {filename}")
-    print(f"📄 Total {len(all_data)} entries written.\n")
-
-# ========== RUN ==========
-if __name__ == "__main__":
-    main()
+        combined_data.extend(fetch_todays_classes(course_id))
+    
+    return "\n".join(combined_data)
