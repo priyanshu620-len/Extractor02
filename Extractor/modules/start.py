@@ -17,7 +17,7 @@ from Extractor.modules import sw1
 
 # -------------------------- DATABASE & CONFIG -------------------------- #
 USER_STATS = {} 
-IMG_MAIN = random.choice(script.IMG) if script.IMG else "https://telegra.ph/file/default_image.jpg"
+IMG_MAIN = random.choice(script.IMG) if script.IMG else "https://chatgpt.com/s/m_6999decf874c8191abd2b4600b8ab2ce"
 
 # -------------------------- HELPERS -------------------------- #
 
@@ -195,13 +195,13 @@ async def handle_callback(_, query):
 • 🆔 **Batch ID:** `{course_id}`
 • 🔗 **Total Content:** {res['total']}
 • 📹 **Videos:** {res['videos']} | 📄 **PDFs:** {res['pdfs']}
-• 🖼️ **Thumbnail:** [Click Here To View](https://telegra.ph/file/default_image.jpg)
+• 🖼️ **Thumbnail:** [Click Here To View](https://chatgpt.com/s/m_6999decf874c8191abd2b4600b8ab2ce)
 • ⏱️ **Total Time Taken:** {time_taken}
 • 📅 **Date-Time:** {current_dt}
 • 📄 **User ID:** `{u_id}`
 • 💬 **Username:** @{query.from_user.username or "None"}
 ━━━━━━━━━━━━━━━━━━━━━━━━
-• 👤 **Extracted by:** 𝓞𝓝𝓮𝓧 🐺
+• 👤 **Extracted by:** 𓆩ONҽX𓆪
 ━━━━━━━━━━━━━━━━━━━━━━━━
 """
                 await query.message.reply_document(document=file, caption=report)
