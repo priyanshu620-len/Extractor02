@@ -11,7 +11,7 @@ from Extractor.core import script
 from Extractor.core.func import subscribe, chk_user
 
 # --- MODULE IMPORTS ---
-import sw1 # Ensure sw1.py is in the same folder or modules folder
+from Extractor.modules import sw1 # Ensure sw1.py is in the same folder or modules folder
 from Extractor.modules.appex_v3 import appex_v3_txt
 from Extractor.modules.classplus import classplus_txt
 from Extractor.modules.khan import khan_login
