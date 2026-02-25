@@ -39,6 +39,8 @@ def fetch_classes(course_id):
             if video_link:
                 all_classes.append(f"{topic_name} | {title} ({teacher}) : {video_link}")
 
+            # Note: Classes ke andar ke PDFs ko bhi yahan PDF count mein lene ke liye logic
+            # Hum isse fetch_classes mein hi rakhenge par iski entry format alag rakhenge
             for pdf in cls.get("classPdf", []):
                 name = pdf.get("name", "")
                 link = pdf.get("url", "")
@@ -46,24 +48,6 @@ def fetch_classes(course_id):
                     all_classes.append(f"{topic_name} | {name} (PDF) : {link}")
 
     return all_classes
-
-# ========== FETCH TODAY'S CLASSES ==========
-def fetch_todays_classes(course_id):
-    url = f"{BASE_URL}/courses/{course_id}/todays-classes"
-    res = requests.get(url)
-    res.raise_for_status()
-    data = res.json()
-    todays = []
-
-    for cls in data.get("data", []):
-        title = cls.get("title", "Untitled")
-        teacher = cls.get("teacherName", "")
-        mp4s = cls.get("mp4Recordings", [])
-        link = mp4s[0].get("url") if mp4s else cls.get("class_link", "")
-        if link:
-            todays.append(f"{title} ({teacher}) : {link}")
-
-    return todays
 
 # ========== FETCH PDFs ==========
 def fetch_pdfs(course_id):
@@ -86,13 +70,31 @@ def fetch_pdfs(course_id):
     return pdf_links
 
 # ========== BOT INTEGRATION FUNCTION ==========
-# Ye function aapka bot call karega
 def get_final_data(course_id, mode="1"):
-    combined_data = []
-    if mode == "1":
-        combined_data.extend(fetch_classes(course_id))
-        combined_data.extend(fetch_pdfs(course_id))
-    else:
-        combined_data.extend(fetch_todays_classes(course_id))
+    # Fetching data
+    classes_list = fetch_classes(course_id)
+    pdfs_list = fetch_pdfs(course_id)
     
-    return "\n".join(combined_data)
+    # Combined text format
+    combined_data = classes_list + pdfs_list
+    final_text = "\n".join(combined_data)
+    
+    # Logic for professional report counts
+    video_count = 0
+    pdf_count = 0
+    
+    for item in combined_data:
+        if "(PDF) :" in item or "uploadPdf" in item or ".pdf" in item.lower():
+            pdf_count += 1
+        else:
+            video_count += 1
+            
+    # Returning data and counts as a dictionary
+    report_data = {
+        "text": final_text,
+        "total": len(combined_data),
+        "videos": video_count,
+        "pdfs": pdf_count
+    }
+    
+    return report_data
