@@ -135,26 +135,33 @@ async def handle_callback(_, query):
 
     # --- NOVA STYLE TRIGGER ---
     # --- SELECTION WAY: BATCH LISTING ---
+    # --- SELECTION WAY: TEXT LIST FORMAT ---
     elif data == "selection_w":
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
             return await query.answer("❌ Premium Feature! Contact @ONeX_sell", show_alert=True)
 
         await query.answer("🔎 Fetching batches...", show_alert=False)
         try:
-            batches = sw1.fetch_active_batches() 
+            batches = sw1.fetch_active_batches()
             if not batches:
                 await safe_edit(query, "❌ No active batches found.", PAGE_2)
                 return
 
-            buttons = []
-            for b in batches:
-                b_id = b.get('id')
-                b_name = b.get('title')[:25]
-                # Yahan humne callback data se name hata diya hai taaki 64-byte limit cross na ho
-                buttons.append([InlineKeyboardButton(f"📁 {b_name}", callback_data=f"sw_{b_id}")])
+            # Professional Text List Format
+            list_text = "📚 **Available Batches:**\n\n"
+            for i, b in enumerate(batches, 1):
+                # Screenshot style pricing aur numbering
+                list_text += f"{i}. {b.get('title')} - ₹{b.get('price', 'None')}\n"
             
-            buttons.append([InlineKeyboardButton("⬅️ Back", callback_data="page_2")])
-            await safe_edit(query, "📚 **Available Batches:**\nSelect a batch to extract:", InlineKeyboardMarkup(buttons))
+            list_text += "\n📝 **Send batch number to extract**"
+            
+            # Sirf navigation buttons niche rakhenge
+            nav_buttons = InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅️ Back Page", callback_data="page_2"), 
+                 InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")]
+            ])
+            
+            await safe_edit(query, list_text, nav_buttons)
 
         except Exception as e:
             await safe_edit(query, f"⚠️ Error: {str(e)}", PAGE_2)
