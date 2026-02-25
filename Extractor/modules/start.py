@@ -22,7 +22,6 @@ IMG_MAIN = random.choice(script.IMG) if script.IMG else "https://telegra.ph/file
 # -------------------------- HELPERS -------------------------- #
 
 async def safe_edit(query, caption, reply_markup):
-    """Prevents bot from crashing on MESSAGE_NOT_MODIFIED error"""
     try:
         await query.message.edit_caption(caption=caption, reply_markup=reply_markup)
     except Exception as e:
@@ -149,77 +148,53 @@ async def handle_callback(_, query):
 
     if data == "back_to_main":
         await safe_edit(query, get_main_caption(u_name, u_id), MAIN_BUTTONS)
-    
     elif data == "page_1":
         await safe_edit(query, "📂 **Without Login Menu - Page 1**", PAGE_1)
-
     elif data == "page_2":
         await safe_edit(query, "📂 **Without Login Menu - Page 2**", PAGE_2)
-
     elif data == "selection_w":
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
             return await query.answer("❌ Premium Feature!", show_alert=True)
-
         await query.answer("🔎 Fetching batches...", show_alert=False)
         try:
             batches = sw1.fetch_active_batches()
-            if not batches:
-                await safe_edit(query, "❌ No active batches found.", PAGE_2)
-                return
-
             list_text = "📚 **Available Batches:**\n\n"
             for i, b in enumerate(batches, 1):
                 list_text += f"{i}. {b.get('title')} - ₹{b.get('price', 'None')}\n"
-            
             list_text += "\n📝 **Send batch number to extract**"
-            
-            nav_buttons = InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Back Page", callback_data="page_2"), 
-                 InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")]
-            ])
+            nav_buttons = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back Page", callback_data="page_2"), 
+                                              InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_main")]])
             await safe_edit(query, list_text, nav_buttons)
-
         except Exception as e:
             await safe_edit(query, f"⚠️ Error: {str(e)}", PAGE_2)
-
     elif data == "home_":
         await query.message.delete()
 
-# --- BATCH NUMBER HANDLER (EXTRACTION) ---
+# --- EXTRACTION HANDLER WITH BLOCKQUOTES ---
 @app.on_message(filters.text & filters.incoming & filters.private)
 async def batch_number_handler(client, message):
     u_id = message.from_user.id
     text = message.text.strip()
-
     if text.isdigit():
         if u_id not in SUDO_USERS and u_id != OWNER_ID:
             return await message.reply("❌ Access Denied!")
-
         try:
             batches = sw1.fetch_active_batches()
             index = int(text) - 1
-
             if 0 <= index < len(batches):
                 selected_batch = batches[index]
                 course_id = selected_batch.get('id')
-                
                 status = await message.reply("⚡ **Please wait, your file will be sent soon...** ⚡")
                 start_time = time.time()
-                
                 res = sw1.get_final_data(course_id, mode="1")
-                links = res.get("text")
-                c_name = res.get("title", "Batch")
-
-                if links:
-                    file = io.BytesIO(links.encode())
+                if res["text"]:
+                    file = io.BytesIO(res["text"].encode())
+                    c_name = res["title"]
                     file.name = f"{c_name.replace(' ', '_')}_enc.txt"
-
                     time_taken = f"{int(time.time() - start_time)}s"
                     current_dt = datetime.now().strftime('%d-%m-%Y  %H:%M:%S')
-
+                    
                     report = f"""
-# Updated Stylish Report with Blockquotes
-report = f"""
 ✨ **𝖲𝖤𝖫𝖤𝖢𝖳𝖨𝖮𝖭 𝖶𝖠𝖸 𝖤𝖷𝖳𝖱𝖠𝖢𝖳𝖨𝖮𝖭** ✨
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 > 📚 **𝖡𝖺𝗍𝖼𝗁:** `{c_name}`
@@ -241,8 +216,8 @@ report = f"""
                     await status.delete()
                     USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
                 else:
-                    await status.edit("❌ No links found in this batch.")
+                    await status.edit("❌ No links found!")
             else:
-                await message.reply("❌ Invalid number! Please check the list.")
+                await message.reply("❌ Invalid number!")
         except Exception as e:
             await message.reply(f"⚠️ Error: {str(e)}")
