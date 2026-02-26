@@ -39,10 +39,10 @@ PREMIUM_LOGS = int(getenv("PREMIUM_LOGS", "-1003533149811"))
 
 # --- YEH VARIABLE MISSING THA ---
 # Aapka Telegram Channel Link jahan report mein 'Join Us' dikhega
-join = getenv("JOIN_URL", "https://t.me/your_channel_username") 
+join = getenv("JOIN_URL", "https://t.me/+u9LKPzpFRgtkN2E9") 
 
 # Bot Username
-BOT_USERNAME = getenv("BOT_USERNAME", "extractor011_bot")
+BOT_USERNAME = getenv("BOT_USERNAME", "")
 
 # Thumbnail URL (Optional)
 THUMB_URL = getenv("THUMB_URL", "https://telegra.ph/file/your_thumb_id.jpg")
