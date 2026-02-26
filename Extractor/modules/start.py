@@ -15,7 +15,9 @@ from Extractor.core import script
 from Extractor.core.func import subscribe, chk_user
 
 # --- MODULE IMPORTS ---
-from Extractor.modules import sw1 
+# Purani line: from Extractor.modules import sw1
+# Nayi line:
+from Extractor.modules import sway1 as sw1
 
 # --- FUTUREKUL MODULE IMPORT ---
 try:
