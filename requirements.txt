@@ -1,4 +1,5 @@
 pyrofork
+pyromod
 aiohttp
 motor
 tgcrypto
@@ -11,3 +12,4 @@ pycryptodome
 pytz
 httpx
 bs4
+python-magic
