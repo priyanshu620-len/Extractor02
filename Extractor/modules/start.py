@@ -15,24 +15,23 @@ from Extractor.core import script
 from Extractor.core.func import subscribe, chk_user
 
 # --- MODULE IMPORTS ---
+from Extractor.modules import sw1 
+
 # --- FUTUREKUL MODULE IMPORT FIX ---
 try:
-    # Pehle modules folder ke raste se check karega
     from Extractor.modules.future_kul import FutureKulExtractor
 except ImportError:
     try:
-        # Phir direct import try karega
         from future_kul import FutureKulExtractor
     except ImportError:
-        # Agar dono fail ho gaye toh manual path add karega
         import sys
-        import os
         sys.path.append(os.path.dirname(os.path.abspath(__file__)))
         from future_kul import FutureKulExtractor
 
 # Initializing Extractor & Cache
 fx = FutureKulExtractor()
-future_cache = {}
+future_cache = {} # Structure: {user_id: {"list": batches, "type": "Live/Recorded"}}
+
 # -------------------------- DATABASE SETUP -------------------------- #
 SUDO_DATA_FILE = "sudo_users.json"
 USER_STATS = {} 
@@ -187,7 +186,11 @@ async def handle_callback(_, query):
         await query.answer("🔎 Fetching FutureKul batches...", show_alert=False)
         try:
             batches = await fx.get_batches(is_live=is_live)
-            future_cache[u_id] = batches # Cache store for number input
+            # Storing list and type in cache
+            future_cache[u_id] = {
+                "list": batches,
+                "type": "Live" if is_live else "Recorded"
+            }
             list_text = f"✨ **FUTUREKUL {'LIVE' if is_live else 'REC'} BATCHES** ✨\n━━━━━━━━━━━━━━━━━━━━\n"
             for i, b in enumerate(batches, 1):
                 list_text += f"**{i}.** `{b.get('title')}`\n"
@@ -216,8 +219,6 @@ async def handle_callback(_, query):
 
 # -------------------------- EXTRACTION HANDLER -------------------------- #
 
-# -------------------------- EXTRACTION HANDLER -------------------------- #
-
 @app.on_message(filters.text & filters.incoming & filters.private)
 async def batch_number_handler(client, message):
     u_id = message.from_user.id
@@ -240,38 +241,19 @@ async def batch_number_handler(client, message):
     # --- FUTUREKUL EXTRACTION LOGIC ---
     if u_id in future_cache:
         try:
-            batches = future_cache[u_id]
+            cache_data = future_cache[u_id]
+            batches = cache_data["list"]
+            b_type = cache_data["type"]
             index = int(text) - 1
             if 0 <= index < len(batches):
                 selected = batches[index]
                 status = await message.reply(f"🚀 **Processing FutureKul:** `{selected['title']}`...")
                 
-                # Fetch links and stats
-                file_io, count = await fx.extract_links(selected['id'], selected['title'])
+                # Fetch links and report from module
+                user_info = {"id": u_id, "username": u_username, "mention": u_mention}
+                file_io, report = await fx.extract_links(selected['id'], selected['title'], user_info, start_time, b_type)
                 
                 if file_io:
-                    # Counting Videos and PDFs for report
-                    content_str = file_io.getvalue().decode('utf-8')
-                    v_count = len(re.findall(r'(m3u8|youtube|mp4|vimeo)', content_str, re.I))
-                    p_count = len(re.findall(r'(\.pdf)', content_str, re.I))
-                    
-                    report = f"""
-⚡ **𝖥𝖴𝖳𝖴𝖱𝖤𝖪𝖴𝖫 𝖤𝖷𝖳𝖱𝖠𝖢𝖳𝖨𝖮𝖭** ⚡
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-> 📚 **𝖡𝖺𝗍𝖼𝗁:** `{selected['title']}`
-> 🆔 **𝖨𝖣:** `{selected['id']}`
-> ━━━━━━━━━━━━━━━━━━━━━━━━
-> ◈ 📱 **𝖠𝗉𝗉:** FutureKul
-> ◈ 📂 **𝖢𝗈𝗇𝗍𝖾𝗇𝗍:** {count} Items
-> ◈ 📹 **𝖵𝗂𝖽𝖾𝗈𝗌:** {v_count}  |  📄 **𝖯𝖣𝖥𝗌:** {p_count}
-> ━━━━━━━━━━━━━━━━━━━━━━━━
-> ⏱️ **𝖳𝗂𝗆𝖾:** {int(time.time() - start_time)}s
-> 📅 **𝖣𝖺𝗍𝖾:** {datetime.now().strftime('%d-%m-%Y  %H:%M:%S')}
-> 🆔 **𝖴𝗌𝖾𝗋 𝖨𝖣:** `{u_id}`
-> 💬 **𝖴𝗌𝖾𝗋𝗇𝖺𝗆𝖾:** {u_username}
-> 👤 **𝖡𝗒:** {u_mention} 🐦‍🔥
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
                     await message.reply_document(document=file_io, caption=report)
                     await status.delete()
                     del future_cache[u_id]
@@ -280,11 +262,11 @@ async def batch_number_handler(client, message):
                 else:
                     return await status.edit("❌ No links found!")
             else:
-                return await message.reply("❌ Invalid number for FutureKul list.")
+                return await message.reply("❌ Invalid number! Please choose from FutureKul list.")
         except Exception as e:
             return await message.reply(f"⚠️ FutureKul Error: {str(e)}")
 
-    # --- SELECTION WAY EXTRACTION LOGIC ---
+    # --- SELECTION WAY EXTRACTION LOGIC (Default) ---
     try:
         batches = sw1.fetch_active_batches()
         index = int(text) - 1
@@ -299,19 +281,20 @@ async def batch_number_handler(client, message):
                 c_name = res.get("title", "Batch")
                 file.name = f"{c_name.replace(' ', '_')}_enc.txt"
                 
+                # Report format same as FutureKul for consistency
                 report = f"""
-✨ **𝖲𝖤𝖫𝖤𝖢𝖳𝖨𝖮𝖭 𝖶𝖠𝖸 𝖤𝖷𝖳𝖱𝖠𝖢𝖳𝖨𝖮𝖭** ✨
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-> 📚 **𝖡𝖺𝗍𝖼𝗁:** `{c_name}`
-> 🆔 **𝖨𝖣:** `{course_id}`
-> ━━━━━━━━━━━━━━━━━━━━━━━━
-> ◈ 📱 **𝖠𝗉𝗉:** Selection Way
-> ◈ 📂 **𝖢𝗈𝗇𝗍𝖾𝗇𝗍:** {res.get('total', 0)} Items
-> ◈ 📹 **𝖵𝗂𝖽𝖾𝗈𝗌:** {res.get('videos', 0)}  |  📄 **𝖯𝖣𝖥𝗌:** {res.get('pdfs', 0)}
+✨ **Selection Way Extraction Report** ✨
+
+📚 **Batch Name:** `{c_name}`
+> • 📱 **App Name:** Selection Way
+> • 🆔 **Batch ID:** `{course_id}`
+> • 🎯 **Batch Type:** Paid Batch
+> • 🔗 **Total Content:** {res.get('total', 0)} Items
+> • 🎥 **Videos:** {res.get('videos', 0)}  |  📄 **𝖯𝖣𝖥𝗌:** {res.get('pdfs', 0)}
 > ━━━━━━━━━━━━━━━━━━━━━━━━
 > ⏱️ **𝖳𝗂𝗆𝖾:** {int(time.time() - start_time)}s
 > 📅 **𝖣𝖺𝗍𝖾:** {datetime.now().strftime('%d-%m-%Y  %H:%M:%S')}
-> 🆔 **𝖴𝗌𝖾𝗋 𝖨𝖣:** `{u_id}`
+> 🆔 **𝖴𝗌𝖾rer 𝖨𝖣:** `{u_id}`
 > 💬 **𝖴𝗌𝖾𝗋𝗇𝖺𝗆𝖾:** {u_username}
 > 👤 **𝖡𝗒:** {u_mention} 🐦‍🔥
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
