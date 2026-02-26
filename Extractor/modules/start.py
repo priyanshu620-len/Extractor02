@@ -27,7 +27,7 @@ except ImportError:
 
 # Initializing
 fx = FutureKulExtractor()
-user_cache = {} # Structure: {user_id: {"list": [], "msg_id": 0, "app": "fk/sw", "type": "Live/Rec"}}
+user_cache = {} 
 
 # -------------------------- DATABASE SETUP -------------------------- #
 SUDO_DATA_FILE = "sudo_users.json"
@@ -54,21 +54,39 @@ def is_premium(user_id):
     if u_id_str in SUDO_DATA:
         expiry = datetime.strptime(SUDO_DATA[u_id_str], '%Y-%m-%d %H:%M:%S')
         if datetime.now() < expiry: return True
+        else:
+            del SUDO_DATA[u_id_str]
+            save_sudo_users(SUDO_DATA)
     return False
 
-# -------------------------- UI TEXTS -------------------------- #
+# -------------------------- PREMIUM COMMANDS -------------------------- #
 
-def get_main_caption(name, user_id):
-    stats = USER_STATS.get(user_id, 0)
-    return f"""💎 **Premium Extractor Bot** 💎
-━━━━━━━━━━━━━━━━━━━━━━━━
-👤 **User:** {name}
-🆔 **ID:** `{user_id}`
-📊 **Extractions:** `{stats}`
-━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 **Select App for Extraction:**"""
+@app.on_message(filters.command("sudo") & filters.user(OWNER_ID))
+async def add_premium(_, message):
+    args = message.command
+    if len(args) < 3: return await message.reply_text("❌ `/sudo [ID] [DAYS]`")
+    try:
+        user_id, days = str(args[1]), int(args[2])
+        exp = (datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
+        SUDO_DATA[user_id] = exp
+        save_sudo_users(SUDO_DATA)
+        await message.reply_text(f"✅ Premium Added for `{user_id}`\n📅 Expiry: `{exp}`")
+    except Exception as e: await message.reply_text(f"⚠️ Error: {e}")
 
-# -------------------------- KEYBOARDS -------------------------- #
+@app.on_message(filters.command("users") & filters.user(OWNER_ID))
+async def list_premium_users(_, message):
+    if not SUDO_DATA: return await message.reply_text("❌ No premium users.")
+    msg = "👥 **Premium Users:**\n" + "\n".join([f"• `{k}` ({v})" for k, v in SUDO_DATA.items()])
+    await message.reply_text(msg)
+
+@app.on_message(filters.command("check"))
+async def my_status(_, message):
+    u_id = str(message.from_user.id)
+    status = "ACTIVE" if is_premium(u_id) else "INACTIVE"
+    exp = SUDO_DATA.get(u_id, "N/A") if status == "ACTIVE" else "None"
+    await message.reply_text(f"💎 Status: `{status}`\n📅 Expiry: `{exp}`")
+
+# -------------------------- KEYBOARDS & START -------------------------- #
 
 MAIN_BUTTONS = InlineKeyboardMarkup([
     [InlineKeyboardButton("👑 FutureKul", callback_data="fk_choice"),
@@ -79,63 +97,45 @@ MAIN_BUTTONS = InlineKeyboardMarkup([
 ])
 
 FK_TYPE_BUTTONS = InlineKeyboardMarkup([
-    [InlineKeyboardButton("🔴 Live Batches", callback_data="futurekul_live"),
-     InlineKeyboardButton("📀 Recorded Batches", callback_data="futurekul_rec")],
+    [InlineKeyboardButton("🔴 Live", callback_data="futurekul_live"),
+     InlineKeyboardButton("📀 Recorded", callback_data="futurekul_rec")],
     [InlineKeyboardButton("🔙 Back", callback_data="back_to_main")]
 ])
-
-# -------------------------- COMMANDS -------------------------- #
 
 @app.on_message(filters.command(["start", "apps"]))
 async def start_cmd(_, message):
     u_name, u_id = message.from_user.first_name, message.from_user.id
     if u_id not in USER_STATS: USER_STATS[u_id] = 0
-    await message.reply_photo(photo=IMG_MAIN, caption=get_main_caption(u_name, u_id), reply_markup=MAIN_BUTTONS)
+    stats = USER_STATS.get(u_id, 0)
+    caption = f"💎 **Premium Extractor**\n━━━━━━━━━━━━━━━━━━━━\n👤 User: {u_name}\n🆔 ID: `{u_id}`\n📊 Extractions: `{stats}`"
+    await message.reply_photo(photo=IMG_MAIN, caption=caption, reply_markup=MAIN_BUTTONS)
 
-# -------------------------- CALLBACK HANDLER -------------------------- #
+# -------------------------- CALLBACKS -------------------------- #
 
 @app.on_callback_query()
 async def handle_callback(client, query):
-    data = query.data
-    u_id = query.from_user.id
-    u_name = query.from_user.first_name
-
+    data, u_id = query.data, query.from_user.id
     if data == "back_to_main":
-        await query.message.edit_caption(caption=get_main_caption(u_name, u_id), reply_markup=MAIN_BUTTONS)
-
+        await query.message.edit_caption(caption="💎 Back to Menu", reply_markup=MAIN_BUTTONS)
     elif data == "fk_choice":
         if not is_premium(u_id): return await query.answer("❌ Premium Required!", show_alert=True)
-        await query.message.reply_text("✨ **FutureKul Selection**\nKaunse batches dekhna chahte hain?", reply_markup=FK_TYPE_BUTTONS)
-        await query.answer()
-
+        await query.message.reply_text("✨ Select FutureKul Type:", reply_markup=FK_TYPE_BUTTONS)
     elif data.startswith("futurekul_"):
         is_live = "live" in data
-        status = await query.message.reply_text(f"🔎 Fetching {'Live' if is_live else 'Recorded'} Batches...")
+        status = await query.message.reply_text("🔎 Fetching...")
         try:
             batches = await fx.get_batches(is_live=is_live)
             user_cache[u_id] = {"list": batches, "type": "Live" if is_live else "Recorded", "msg_id": status.id, "app": "fk"}
-            list_text = f"✨ **FUTUREKUL {'LIVE' if is_live else 'REC'} BATCHES** ✨\n━━━━━━━━━━━━━━━━━━━━\n"
-            for i, b in enumerate(batches, 1):
-                list_text += f"**{i}.** `{b.get('title')}`\n"
-            list_text += "\n> 📝 **Send batch number to extract.**"
-            await status.edit_text(list_text)
+            await status.edit_text(f"✨ **FUTUREKUL {'LIVE' if is_live else 'REC'}**\n" + "\n".join([f"{i+1}. `{b['title']}`" for i, b in enumerate(batches)]))
         except Exception as e: await status.edit_text(f"⚠️ Error: {e}")
-
     elif data == "selection_w":
         if not is_premium(u_id): return await query.answer("❌ Premium Required!", show_alert=True)
-        status = await query.message.reply_text("🔎 Fetching Selection Way batches...")
+        status = await query.message.reply_text("🔎 Fetching SW...")
         try:
             batches = sw1.fetch_active_batches()
             user_cache[u_id] = {"list": batches, "msg_id": status.id, "app": "sw"}
-            list_text = "📚 **Selection Way Batches:**\n━━━━━━━━━━━━━━━━━━━━\n"
-            for i, b in enumerate(batches, 1):
-                list_text += f"**{i}.** {b.get('title')}\n"
-            list_text += "\n> 📝 **Send batch number to extract.**"
-            await status.edit_text(list_text)
+            await status.edit_text("📚 **Selection Way Batches:**\n" + "\n".join([f"{i+1}. {b['title']}" for i, b in enumerate(batches)]))
         except Exception as e: await status.edit_text(f"⚠️ Error: {e}")
-            
-    elif data == "view_stats":
-        await query.answer(f"📊 Total Extractions: {USER_STATS.get(u_id, 0)}", show_alert=True)
     elif data == "home_": await query.message.delete()
 
 # -------------------------- EXTRACTION HANDLER -------------------------- #
@@ -143,34 +143,26 @@ async def handle_callback(client, query):
 @app.on_message(filters.text & filters.incoming & filters.private)
 async def batch_number_handler(client, message):
     u_id = message.from_user.id
-    text = message.text.strip()
-    
-    if not text.isdigit() or u_id not in user_cache: return
+    if not message.text.isdigit() or u_id not in user_cache: return
     if not is_premium(u_id): return await message.reply("❌ Premium Expired!")
 
-    index = int(text) - 1
+    index = int(message.text) - 1
     cache = user_cache[u_id]
+    if index < 0 or index >= len(cache["list"]): return await message.reply("❌ Invalid Index!")
     
-    if index < 0 or index >= len(cache["list"]):
-        return await message.reply("❌ Invalid number!")
-
     selected = cache["list"][index]
-    status = await message.reply("⚡ **Extracting Data... Please Wait**")
+    status = await message.reply("⚡ **Extracting...**")
 
     try:
-        # --- SELECTION WAY ---
         if cache["app"] == "sw":
-            res = sw1.get_final_data(selected.get('id'), u_id, message.from_user.username or "N/A", message.from_user.first_name)
+            res = sw1.get_final_data(selected['id'], u_id, message.from_user.username or "N/A", message.from_user.first_name)
             if res.get("text"):
                 file = io.BytesIO(res["text"].encode())
-                file.name = f"{res.get('title', 'Batch').replace(' ', '_')}.txt"
+                file.name = f"{res['title'].replace(' ', '_')}.txt"
                 await message.reply_document(document=file, caption=res["report"])
                 USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
-                # Auto-Delete List Message
                 await client.delete_messages(message.chat.id, [cache["msg_id"], status.id])
                 del user_cache[u_id]
-
-        # --- FUTUREKUL ---
         elif cache["app"] == "fk":
             user_info = {"id": u_id, "username": message.from_user.username or "N/A", "mention": message.from_user.first_name}
             file_io, report = await fx.extract_links(selected['id'], selected['title'], user_info, time.time(), cache["type"])
@@ -179,6 +171,4 @@ async def batch_number_handler(client, message):
                 USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
                 await client.delete_messages(message.chat.id, [cache["msg_id"], status.id])
                 del user_cache[u_id]
-
-    except Exception as e:
-        await status.edit_text(f"⚠️ Extraction Error: {e}")
+    except Exception as e: await status.edit_text(f"⚠️ Error: {e}")
