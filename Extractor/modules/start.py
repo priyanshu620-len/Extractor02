@@ -12,7 +12,7 @@ from config import OWNER_ID
 from Extractor.core import script
 
 # --- MODULE IMPORTS ---
-from Extractor.modules import sway1 as sw1 # 'sway1' ko 'sw1' ki tarah use karenge
+from Extractor.modules import sw1 # 'sway1' ko 'sw1' ki tarah use karenge
 
 try:
     from Extractor.modules.future_kul import FutureKulExtractor
