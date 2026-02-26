@@ -15,12 +15,24 @@ from Extractor.core import script
 from Extractor.core.func import subscribe, chk_user
 
 # --- MODULE IMPORTS ---
-from Extractor.modules import sw1 
-from future_kul import FutureKulExtractor # Aapki file ka naam
+# --- FUTUREKUL MODULE IMPORT FIX ---
+try:
+    # Pehle modules folder ke raste se check karega
+    from Extractor.modules.future_kul import FutureKulExtractor
+except ImportError:
+    try:
+        # Phir direct import try karega
+        from future_kul import FutureKulExtractor
+    except ImportError:
+        # Agar dono fail ho gaye toh manual path add karega
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from future_kul import FutureKulExtractor
 
-# Initializing Extractors & Cache
+# Initializing Extractor & Cache
 fx = FutureKulExtractor()
-future_cache = {} # FutureKul ke liye
+future_cache = {}
 # -------------------------- DATABASE SETUP -------------------------- #
 SUDO_DATA_FILE = "sudo_users.json"
 USER_STATS = {} 
