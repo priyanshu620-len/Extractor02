@@ -16,7 +16,11 @@ from Extractor.core.func import subscribe, chk_user
 
 # --- MODULE IMPORTS ---
 from Extractor.modules import sw1 
+from future_kul import FutureKulExtractor # Aapki file ka naam
 
+# Initializing Extractors & Cache
+fx = FutureKulExtractor()
+future_cache = {} # FutureKul ke liye
 # -------------------------- DATABASE SETUP -------------------------- #
 SUDO_DATA_FILE = "sudo_users.json"
 USER_STATS = {} 
@@ -91,7 +95,8 @@ MAIN_BUTTONS = InlineKeyboardMarkup([
 ])
 
 PAGE_1 = InlineKeyboardMarkup([
-    [InlineKeyboardButton("👑 Premium++", callback_data="prem_plus")],
+    [InlineKeyboardButton("👑 FutureKul LIVE", callback_data="futurekul_live"),
+     InlineKeyboardButton("📀 FutureKul REC", callback_data="futurekul_rec")],
     [InlineKeyboardButton("🔐 VideoCrypt", callback_data="videocrypt")],
     [InlineKeyboardButton("🪄 AppX Test", callback_data="appx_test"),
      InlineKeyboardButton("📚 Study IQ", callback_data="studyiq")],
@@ -161,46 +166,128 @@ async def handle_callback(_, query):
         await safe_edit(query, "📂 **Without Login Menu - Page 1**", PAGE_1)
     elif data == "page_2":
         await safe_edit(query, "📂 **Without Login Menu - Page 2**", PAGE_2)
+    
+    # --- FUTUREKUL SECTION ---
+    elif data.startswith("futurekul_"):
+        if not is_premium(u_id):
+            return await query.answer("❌ Premium Required!", show_alert=True)
+        is_live = True if "live" in data else False
+        await query.answer("🔎 Fetching FutureKul batches...", show_alert=False)
+        try:
+            batches = await fx.get_batches(is_live=is_live)
+            future_cache[u_id] = batches # Cache store for number input
+            list_text = f"✨ **FUTUREKUL {'LIVE' if is_live else 'REC'} BATCHES** ✨\n━━━━━━━━━━━━━━━━━━━━\n"
+            for i, b in enumerate(batches, 1):
+                list_text += f"**{i}.** `{b.get('title')}`\n"
+            list_text += "\n> 📝 **Send batch number to extract.**\n> Send `cancel` to reset."
+            await safe_edit(query, list_text, PAGE_1)
+        except Exception as e:
+            await safe_edit(query, f"⚠️ Error: {str(e)}", PAGE_1)
+
+    # --- SELECTION WAY SECTION ---
     elif data == "selection_w":
         if not is_premium(u_id):
             return await query.answer("❌ Premium Required!", show_alert=True)
         await query.answer("🔎 Fetching batches...", show_alert=False)
         try:
             batches = sw1.fetch_active_batches()
-            list_text = "📚 **Available Batches:**\n\n"
+            list_text = "📚 **Available Batches (Selection Way):**\n\n"
             for i, b in enumerate(batches, 1):
                 list_text += f"{i}. {b.get('title')} - ₹{b.get('price', 'None')}\n"
             list_text += "\n📝 **Send batch number to extract**"
             await safe_edit(query, list_text, PAGE_2)
         except Exception as e:
             await safe_edit(query, f"⚠️ Error: {str(e)}", PAGE_2)
+            
     elif data == "home_":
         await query.message.delete()
+
+# -------------------------- EXTRACTION HANDLER -------------------------- #
 
 # -------------------------- EXTRACTION HANDLER -------------------------- #
 
 @app.on_message(filters.text & filters.incoming & filters.private)
 async def batch_number_handler(client, message):
     u_id = message.from_user.id
+    u_name = message.from_user.first_name
+    u_mention = f"[{u_name}](tg://user?id={u_id})"
+    u_username = f"@{message.from_user.username}" if message.from_user.username else "N/A"
     text = message.text.strip()
-    if text.isdigit():
-        if not is_premium(u_id):
-            return await message.reply("❌ **Premium Required!** Type /check")
+    
+    if not text.isdigit():
+        if text.lower() == "cancel" and u_id in future_cache:
+            del future_cache[u_id]
+            return await message.reply("✅ **FutureKul selection reset.**")
+        return
+
+    if not is_premium(u_id):
+        return await message.reply("❌ **Premium Required!** Type /check")
+
+    start_time = time.time()
+    
+    # --- FUTUREKUL EXTRACTION LOGIC ---
+    if u_id in future_cache:
         try:
-            batches = sw1.fetch_active_batches()
+            batches = future_cache[u_id]
             index = int(text) - 1
             if 0 <= index < len(batches):
-                selected_batch = batches[index]
-                course_id = selected_batch.get('id')
-                status = await message.reply("⚡ **Please wait...**")
-                start_time = time.time()
-                res = sw1.get_final_data(course_id, mode="1")
-                if res.get("text"):
-                    file = io.BytesIO(res["text"].encode())
-                    c_name = res.get("title", "Batch")
-                    file.name = f"{c_name.replace(' ', '_')}_enc.txt"
+                selected = batches[index]
+                status = await message.reply(f"🚀 **Processing FutureKul:** `{selected['title']}`...")
+                
+                # Fetch links and stats
+                file_io, count = await fx.extract_links(selected['id'], selected['title'])
+                
+                if file_io:
+                    # Counting Videos and PDFs for report
+                    content_str = file_io.getvalue().decode('utf-8')
+                    v_count = len(re.findall(r'(m3u8|youtube|mp4|vimeo)', content_str, re.I))
+                    p_count = len(re.findall(r'(\.pdf)', content_str, re.I))
                     
                     report = f"""
+⚡ **𝖥𝖴𝖳𝖴𝖱𝖤𝖪𝖴𝖫 𝖤𝖷𝖳𝖱𝖠𝖢𝖳𝖨𝖮𝖭** ⚡
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+> 📚 **𝖡𝖺𝗍𝖼𝗁:** `{selected['title']}`
+> 🆔 **𝖨𝖣:** `{selected['id']}`
+> ━━━━━━━━━━━━━━━━━━━━━━━━
+> ◈ 📱 **𝖠𝗉𝗉:** FutureKul
+> ◈ 📂 **𝖢𝗈𝗇𝗍𝖾𝗇𝗍:** {count} Items
+> ◈ 📹 **𝖵𝗂𝖽𝖾𝗈𝗌:** {v_count}  |  📄 **𝖯𝖣𝖥𝗌:** {p_count}
+> ━━━━━━━━━━━━━━━━━━━━━━━━
+> ⏱️ **𝖳𝗂𝗆𝖾:** {int(time.time() - start_time)}s
+> 📅 **𝖣𝖺𝗍𝖾:** {datetime.now().strftime('%d-%m-%Y  %H:%M:%S')}
+> 🆔 **𝖴𝗌𝖾𝗋 𝖨𝖣:** `{u_id}`
+> 💬 **𝖴𝗌𝖾𝗋𝗇𝖺𝗆𝖾:** {u_username}
+> 👤 **𝖡𝗒:** {u_mention} 🐦‍🔥
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+                    await message.reply_document(document=file_io, caption=report)
+                    await status.delete()
+                    del future_cache[u_id]
+                    USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
+                    return
+                else:
+                    return await status.edit("❌ No links found!")
+            else:
+                return await message.reply("❌ Invalid number for FutureKul list.")
+        except Exception as e:
+            return await message.reply(f"⚠️ FutureKul Error: {str(e)}")
+
+    # --- SELECTION WAY EXTRACTION LOGIC ---
+    try:
+        batches = sw1.fetch_active_batches()
+        index = int(text) - 1
+        if 0 <= index < len(batches):
+            selected_batch = batches[index]
+            course_id = selected_batch.get('id')
+            status = await message.reply("⚡ **Processing Selection Way...**")
+            
+            res = sw1.get_final_data(course_id, mode="1")
+            if res.get("text"):
+                file = io.BytesIO(res["text"].encode())
+                c_name = res.get("title", "Batch")
+                file.name = f"{c_name.replace(' ', '_')}_enc.txt"
+                
+                report = f"""
 ✨ **𝖲𝖤𝖫𝖤𝖢𝖳𝖨𝖮𝖭 𝖶𝖠𝖸 𝖤𝖷𝖳𝖱𝖠𝖢𝖳𝖨𝖮𝖭** ✨
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 > 📚 **𝖡𝖺𝗍𝖼𝗁:** `{c_name}`
@@ -212,18 +299,17 @@ async def batch_number_handler(client, message):
 > ━━━━━━━━━━━━━━━━━━━━━━━━
 > ⏱️ **𝖳𝗂𝗆𝖾:** {int(time.time() - start_time)}s
 > 📅 **𝖣𝖺𝗍𝖾:** {datetime.now().strftime('%d-%m-%Y  %H:%M:%S')}
-> 🖼️ **𝖳𝗁𝗎𝗆𝖻:** [𝖢𝗅𝗂𝖼𝗄 𝖧𝖾𝗋𝖾 𝖳𝗈 𝖵𝗂𝖾𝗐](https://telegra.ph/file/default_image.jpg)
-> ━━━━━━━━━━━━━━━━━━━━━━━━
-> 👤 **𝖴𝗌𝖾𝗋:** `{u_id}`
-> 🔗 **𝖡𝗒:** 𓆩 𝓞𝓝𝓮𝓧 𓆪 🐺
+> 🆔 **𝖴𝗌𝖾𝗋 𝖨𝖣:** `{u_id}`
+> 💬 **𝖴𝗌𝖾𝗋𝗇𝖺𝗆𝖾:** {u_username}
+> 👤 **𝖡𝗒:** {u_mention} 🐦‍🔥
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-                    await message.reply_document(document=file, caption=report)
-                    await status.delete()
-                    USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
-                else:
-                    await status.edit("❌ No links found!")
+                await message.reply_document(document=file, caption=report)
+                await status.delete()
+                USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
             else:
-                await message.reply("❌ Invalid number! Please choose from the list.")
-        except Exception as e:
-            await message.reply(f"⚠️ Error: {str(e)}")
+                await status.edit("❌ No links found!")
+        else:
+            await message.reply("❌ Invalid number! Please choose from the list.")
+    except Exception as e:
+        await message.reply(f"⚠️ Error: {str(e)}")
