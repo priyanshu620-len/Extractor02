@@ -12,7 +12,7 @@ from config import OWNER_ID
 from Extractor.core import script
 
 # --- MODULE IMPORTS ---
-from Extractor.modules import sw1 # 'sway1' ko 'sw1' ki tarah use karenge
+from Extractor.modules import sw1 
 
 try:
     from Extractor.modules.future_kul import FutureKulExtractor
@@ -23,7 +23,7 @@ except ImportError:
 
 # Initializing
 fx = FutureKulExtractor()
-user_cache = {} # Structure: {u_id: {"list": [], "msg_id": 0, "menu_id": 0, "app": "sw/fk"}}
+user_cache = {} # {u_id: {"list": [], "msg_id": 0, "menu_id": 0, "app": "sw/fk", "type": "Live/Rec"}}
 
 # -------------------------- DATABASE & PREMIUM -------------------------- #
 SUDO_DATA_FILE = "sudo_users.json"
@@ -76,7 +76,7 @@ async def start_cmd(client, message):
     u_id = message.from_user.id
     u_name = message.from_user.first_name
 
-    # --- ANTI-SPAM: Delete Old Menu ---
+    # ANTI-SPAM: Purana menu message delete karna
     if u_id in user_cache and "menu_id" in user_cache[u_id]:
         try: await client.delete_messages(message.chat.id, user_cache[u_id]["menu_id"])
         except: pass
@@ -104,7 +104,7 @@ async def add_sudo(_, message):
 
 @app.on_message(filters.command("users") & filters.user(OWNER_ID))
 async def list_users(_, message):
-    msg = f"👥 **Premium Users:** {len(SUDO_DATA)}\n" + "\n".join([f"`{k}`" for k in SUDO_DATA.keys()])
+    msg = f"👥 **Premium Users:** {len(SUDO_DATA)}\n" + "\n".join([f"`{k}` ({v})" for k, v in SUDO_DATA.items()])
     await message.reply_text(msg)
 
 # -------------------------- CALLBACK HANDLER -------------------------- #
@@ -123,12 +123,12 @@ async def handle_callback(client, query):
 
     elif data == "fk_choice":
         if not is_premium(u_id): return await query.answer("❌ Premium Required!", show_alert=True)
-        await query.message.reply_text("✨ **FutureKul Selection**\nChoose batch type:", reply_markup=FK_TYPE_BUTTONS)
+        await query.message.reply_text("✨ **FutureKul Selection**\nKaunse batches dekhna chahte hain?", reply_markup=FK_TYPE_BUTTONS)
         await query.answer()
 
     elif data.startswith("futurekul_"):
         is_live = "live" in data
-        status = await query.message.reply_text("🔎 Fetching FutureKul Batches...")
+        status = await query.message.reply_text(f"🔎 Fetching {data.split('_')[1].capitalize()} Batches...")
         try:
             batches = await fx.get_batches(is_live=is_live)
             user_cache[u_id].update({"list": batches, "type": "Live" if is_live else "Recorded", "msg_id": status.id, "app": "fk"})
@@ -157,15 +157,15 @@ async def handle_callback(client, query):
 @app.on_message(filters.text & filters.incoming & filters.private)
 async def batch_number_handler(client, message):
     u_id = message.from_user.id
-    if not message.text.isdigit() or u_id not in user_cache: return
+    if not message.text.isdigit() or u_id not in user_cache or "list" not in user_cache[u_id]: return
     if not is_premium(u_id): return await message.reply("❌ Premium Expired!")
 
     index = int(message.text) - 1
     cache = user_cache[u_id]
-    if index < 0 or index >= len(cache.get("list", [])): return await message.reply("❌ Invalid Number!")
+    if index < 0 or index >= len(cache["list"]): return await message.reply("❌ Invalid Number!")
 
     selected = cache["list"][index]
-    status = await message.reply("⚡ **Extracting... Please Wait**")
+    status = await message.reply("⚡ **Extracting Data... Please Wait**")
 
     try:
         # Selection Way Logic
@@ -173,11 +173,12 @@ async def batch_number_handler(client, message):
             res = sw1.get_final_data(selected['id'], u_id, message.from_user.username or "N/A", message.from_user.first_name)
             if res.get("text"):
                 file = io.BytesIO(res["text"].encode())
-                file.name = f"{res['title'].replace(' ', '_')}.txt"
+                file.name = f"{res.get('title', 'Batch').replace(' ', '_')}.txt"
                 await message.reply_document(document=file, caption=res["report"])
                 USER_STATS[u_id] = USER_STATS.get(u_id, 0) + 1
+                # Cleanup
                 await client.delete_messages(message.chat.id, [cache["msg_id"], status.id, message.id])
-                del user_cache[u_id]["list"] # Clear list only
+                del user_cache[u_id]["list"]
 
         # FutureKul Logic
         elif cache["app"] == "fk":
