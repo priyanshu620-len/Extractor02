@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 # ========== CONFIGURATION ==========
 BASE_URL = "https://backend.multistreaming.site/api"
 # Aapka Brand Logo (ONeX Extractor)
-MY_BRAND_THUMB = "https://i.ibb.co/v4m0s9R/ONeX-Extractor.jpg"
+MY_BRAND_THUMB = "https://i.postimg.cc/Y0x5RtMH/Whats-App-Image-2026-02-28-at-6-57-52-PM.jpg"
 
 session = requests.Session()
 session.headers.update({
