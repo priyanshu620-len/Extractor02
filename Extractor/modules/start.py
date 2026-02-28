@@ -1,76 +1,140 @@
 import os
-import asyncio
-import logging
+import time
+import datetime
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.enums import ParseMode
 
-# Modules Import (Ensure filenames match your repo)
-from Extractor.modules.CP_PRO import process_classplus
-# from Extractor.modules.sway1 import process_sway   <-- Inhe bhi aise hi import karein
-# from Extractor.modules.future_kul import process_fk
+# ========== CONFIGURATION ==========
+# Aapka Brand Logo Jo Aapne Provide Kiya Hai
+MY_BRAND_THUMB = "https://i.ibb.co/v4m0s9R/ONeX-Extractor.jpg"
 
-import config
+# ========== MODULES IMPORT ==========
+try:
+    from Extractor.modules.sw1 import get_final_data as sw1_process
+    from Extractor.modules.futurekul import get_final_data as fk_process 
+except ImportError as e:
+    print(f"⚠️ Critical Import Error: {e}. Check your module files.")
 
-# Bot Setup
-app = Client(
-    "ExtractorBot",
-    api_id=config.API_ID,
-    api_hash=config.API_HASH,
-    bot_token=config.BOT_TOKEN
-)
+# ========== START COMMAND WITH THUMBNAIL & BUTTONS ==========
+@Client.on_message(filters.command("start"))
+async def start_cmd(client: Client, message: Message):
+    welcome_text = (
+        "✨ **ONeX EXTRACTOR v3.0** ✨\n"
+        "«────────────────────────────»\n"
+        "👋 Hello {},\n\n"
+        "Welcome to the most advanced extraction bot. Niche diye gaye buttons ka use karke platform select karein:\n\n"
+        "🛡️ **System Status:** `Online` ✅\n"
+        "«────────────────────────────»\n"
+        "⚡ *Powered by ONeX Extractor*"
+    ).format(message.from_user.mention)
 
-# --- START COMMAND ---
-@app.on_message(filters.command("start") & filters.private)
-async def start_handler(bot: Client, m: Message):
-    mention = m.from_user.mention
-    start_text = (
-        f"👋 **Welcome {mention}!**\n\n"
-        "Main ek advanced Content Extractor Bot hoon. "
-        "Niche diye gaye buttons se extraction start karein."
+    # Inline Buttons Layout
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📱 Selection Way", callback_data="sw_info"),
+            InlineKeyboardButton("🎓 FutureKul", callback_data="fk_info")
+        ],
+        [
+            InlineKeyboardButton("👤 Developer", url="https://t.me/ONeX_sell")
+        ]
+    ])
+    
+    # Photo ke saath welcome message
+    await message.reply_photo(
+        photo=MY_BRAND_THUMB,
+        caption=welcome_text,
+        reply_markup=buttons
     )
+
+# ========== CALLBACK HANDLER (Button Click) ==========
+@Client.on_callback_query()
+async def callback_handler(client: Client, query: CallbackQuery):
+    if query.data == "sw_info":
+        await query.answer()
+        await query.message.edit_caption(
+            caption="🚀 **SELECTION WAY EXTRACTION**\n\n"
+                    "Extract karne ke liye niche wala format use karein:\n"
+                    "👉 `/sw <batch_id>`\n\n"
+                    "Example: `/sw 698487d5fdd21a8a2d1a5270`",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="back_start")]])
+        )
     
-    buttons = [
-        [InlineKeyboardButton("📱 Classplus (PRO)", callback_data="run_cp")],
-        [InlineKeyboardButton("✨ Sway Module", callback_data="run_sway")],
-        [InlineKeyboardButton("🚀 Future Kul", callback_data="run_fk")]
-    ]
+    elif query.data == "fk_info":
+        await query.answer()
+        await query.message.edit_caption(
+            caption="🎓 **FUTUREKUL EXTRACTION**\n\n"
+                    "Extract karne ke liye niche wala format use karein:\n"
+                    "👉 `/fk <batch_id>`\n\n"
+                    "Example: `/fk 1234567890`",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Back", callback_data="back_start")]])
+        )
     
-    await m.reply_text(start_text, reply_markup=InlineKeyboardMarkup(buttons))
-
-# --- COMMAND HANDLERS ---
-
-# 1. Classplus PRO Command
-@app.on_message(filters.command("cp") & filters.incoming)
-async def cp_cmd_handler(bot: Client, m: Message):
-    user_id = m.from_user.id
-    # Premium check yahan add kar sakte hain
-    try:
-        await process_classplus(bot, m, user_id)
-    except Exception as e:
-        logging.error(f"CP Error: {e}")
-        await m.reply_text("⚠️ **Error:** Module not responding.")
-
-# 2. Sway Command
-@app.on_message(filters.command("sway") & filters.incoming)
-async def sway_cmd_handler(bot: Client, m: Message):
-    user_id = m.from_user.id
-    # await process_sway(bot, m, user_id) # Call your sway module
-    await m.reply_text("Sway Module is being integrated...")
-
-# --- CALLBACK HANDLERS (Buttons ke liye) ---
-@app.on_callback_query()
-async def cb_handler(bot: Client, query):
-    user_id = query.from_user.id
-    
-    if query.data == "run_cp":
-        await query.message.delete()
-        await process_classplus(bot, query.message, user_id)
+    elif query.data == "back_start":
+        welcome_text = (
+            "✨ **ONeX EXTRACTOR v3.0** ✨\n"
+            "«────────────────────────────»\n"
+            "👋 Hello {},\n\n"
+            "Platform select karein:\n\n"
+            "🛡️ **System Status:** `Online` ✅\n"
+            "«────────────────────────────»\n"
+            "⚡ *Powered by ONeX Extractor*"
+        ).format(query.from_user.mention)
         
-    elif query.data == "run_sway":
-        await query.answer("Sway module starting...", show_alert=True)
-        # await process_sway(bot, query.message, user_id)
+        buttons = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("📱 Selection Way", callback_data="sw_info"),
+                InlineKeyboardButton("🎓 FutureKul", callback_data="fk_info")
+            ],
+            [
+                InlineKeyboardButton("👤 Developer", url="https://t.me/ONeX_sell")
+            ]
+        ])
+        await query.message.edit_caption(caption=welcome_text, reply_markup=buttons)
 
-# --- IDLE & RUN ---
-if __name__ == "__main__":
-    print("✅ Bot is live and anti-spam mode is ON!")
-    app.run()
+# ========== EXTRACTION HANDLER (REUSABLE) ==========
+async def run_extraction(message: Message, platform_name, process_func):
+    if len(message.command) < 2:
+        return await message.reply_text(f"❌ **Usage:** `/{message.command[0]} <batch_id>`")
+    
+    course_id = message.command[1]
+    status_msg = await message.reply_text(f"🔎 **Extracting from {platform_name}... Please wait.**")
+    
+    try:
+        data = process_func(
+            course_id, 
+            tg_user_id=message.from_user.id, 
+            tg_username=message.from_user.username or "N/A",
+            extractor_name="ONeX"
+        )
+        
+        suffix = "SW" if platform_name == "Selection Way" else "FK"
+        safe_title = data['title'].replace(' ', '_')
+        file_name = f"{safe_title}_{suffix}.txt"
+        
+        with open(file_name, "w", encoding="utf-8") as f:
+            f.write(data['text'])
+            
+        # Sending Document with ONeX Logo as Thumbnail
+        await message.reply_document(
+            document=file_name,
+            thumb=MY_BRAND_THUMB,
+            caption=data['report'],
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+        await status_msg.delete()
+        if os.path.exists(file_name):
+            os.remove(file_name)
+            
+    except Exception as e:
+        await status_msg.edit(f"❌ **{platform_name} Error:** `{str(e)}`" )
+
+# ========== COMMAND REGISTERING ==========
+@Client.on_message(filters.command("sw"))
+async def sw_handler(client: Client, message: Message):
+    await run_extraction(message, "Selection Way", sw1_process)
+
+@Client.on_message(filters.command("fk"))
+async def fk_handler(client: Client, message: Message):
+    await run_extraction(message, "FutureKul", fk_process)
