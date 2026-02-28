@@ -71,3 +71,30 @@ class FutureKulExtractor:
 ╾─────────────────────────╼
 """
             return file_io, report
+
+# --- CRITICAL BRIDGE FUNCTION FOR START.PY ---
+
+async def get_final_data(batch_id, tg_user_id, tg_username, extractor_name):
+    """ This is what start.py looks for """
+    start_time = time.time()
+    
+    user_info = {
+        'id': tg_user_id,
+        'username': f"@{tg_username}" if tg_username else "No Username",
+        'mention': f"[{tg_username}](tg://user?id={tg_user_id})" if tg_username else "User"
+    }
+
+    # Initialize Class
+    extractor = FutureKulExtractor()
+    
+    # Run the extraction
+    # Note: Using batch_id as title for now; you can improve this by fetching titles later
+    file_io, report = await extractor.extract_links(
+        batch_id, 
+        f"Batch_{batch_id}", 
+        user_info, 
+        start_time, 
+        extractor_name
+    )
+    
+    return file_io, report
