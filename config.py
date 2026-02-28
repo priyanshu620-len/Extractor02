@@ -45,4 +45,4 @@ join = getenv("JOIN_URL", "https://t.me/+u9LKPzpFRgtkN2E9")
 BOT_USERNAME = getenv("BOT_USERNAME", "@ONeXCodebot")
 
 # Thumbnail URL (Optional)
-THUMB_URL = getenv("THUMB_URL", "https://telegra.ph/file/your_thumb_id.jpg")
+THUMB_URL = getenv("THUMB_URL", "https://postimg.cc/hQfZPWXy")
