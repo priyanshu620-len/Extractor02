@@ -12,7 +12,7 @@ MY_BRAND_THUMB = "https://i.postimg.cc/Y0x5RtMH/Whats-App-Image-2026-02-28-at-6-
 # ========== MODULES IMPORT ==========
 try:
     from Extractor.modules.sw1 import get_final_data as sw1_process
-    from Extractor.modules.futurekul import get_final_data as fk_process 
+    from Extractor.modules.future_kul import get_final_data as fk_process 
 except ImportError as e:
     print(f"⚠️ Critical Import Error: {e}. Check your module files.")
 
